@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "237303080293",
+    "project_id": "regional-meet-app",
+    "storage_bucket": "regional-meet-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:237303080293:android:39c14ec46f5b52c9b4ad8c",
+        "android_client_info": {
+          "package_name": "com.v3.regionalmeetapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDiHDFbkv0bRkx1J8U9XMBI_cnUqnuEQE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,17 +4,22 @@
     "slug": "app",
     "version": "1.0.0",
     "scheme": "app",
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        // <-- Add this whole block
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0033A0"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -28,17 +33,18 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.regionalmeetapp" // <-- Add this
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.v3.regionalmeetapp", // <-- Add this
+      "googleServicesFile": "./google-services.json" // <-- Add this
     },
     "extra": {
       "router": {},
