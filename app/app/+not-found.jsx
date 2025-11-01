@@ -10,7 +10,7 @@ export default function NotFoundScreen() {
           We couldn't find the page you were looking for.
         </Text>
 
-        <Link href="/" asChild>
+        <Link href="(tabs)" asChild>
           <TouchableOpacity className="rounded-lg bg-blue-500 px-6 py-3">
             <Text className="text-white">Go to Home Screen</Text>
           </TouchableOpacity>

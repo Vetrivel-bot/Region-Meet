@@ -1,17 +1,18 @@
+// app/_layout.tsx
 import React, { useEffect, useRef } from 'react';
-import { Stack, router, ErrorBoundary } from 'expo-router';
+import { Stack, Tabs, router, ErrorBoundary } from 'expo-router';
 import { TouchableOpacity, StatusBar } from 'react-native'; // Added StatusBar
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import '../global.css'; // global styles
-
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // --- HERE ARE THE FIXES ---
 // 1. Import the Safe Area Provider
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 // 2. Import the Query Provider
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from "@/services/queryClient";
+import { queryClient } from '@/services/queryClient';
 // --- END FIXES ---
 
 import { AppProvider } from '@/context/AppContext';
@@ -20,6 +21,7 @@ import { theme } from '@/theme/theme';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 
 export { ErrorBoundary }; // keeps the expo-router error boundary
+import AnimatedGlassBackground from '@/components/AnimatedGlassBackground';
 
 const TOKEN_STORAGE_KEY = 'expo-push-token';
 
@@ -28,79 +30,75 @@ export default function RootLayout() {
   const responseListener = useRef();
 
   // --- Updated Notification Logic ---
-  useEffect(() => {
-    const setupNotifications = async () => {
-      const currentToken = await registerForPushNotificationsAsync();
-      if (!currentToken) {
-        console.log('Could not get push token.');
-        return;
-      }
-      const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-      if (storedToken !== currentToken) {
-        console.log('New or changed push token identified:', currentToken);
-        // TODO: Send token to your backend (MongoDB)
-        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, currentToken);
-        console.log('New token saved to local storage.');
-      } else {
-        console.log('Push token is already stored and up-to-date.');
-      }
-      console.log('Native (FCM) Token for testing:', currentToken);
-    };
-    setupNotifications();
-    
-    // --- Listeners ---
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification Received (Foreground):', notification);
-    });
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification Tapped:', response);
-    });
-    return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-    };
-  }, []);
+  // useEffect(() => {
+  //   const setupNotifications = async () => {
+  //     const currentToken = await registerForPushNotificationsAsync();
+  //     if (!currentToken) {
+  //       console.log('Could not get push token.');
+  //       return;
+  //     }
+  //     const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+  //     if (storedToken !== currentToken) {
+  //       console.log('New or changed push token identified:', currentToken);
+  //       // TODO: Send token to your backend (MongoDB)
+  //       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, currentToken);
+  //       console.log('New token saved to local storage.');
+  //     } else {
+  //       console.log('Push token is already stored and up-to-date.');
+  //     }
+  //     console.log('Native (FCM) Token for testing:', currentToken);
+  //   };
+  //   setupNotifications();
+
+  //   // --- Listeners ---
+  //   notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+  //     console.log('Notification Received (Foreground):', notification);
+  //   });
+  //   responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+  //     console.log('Notification Tapped:', response);
+  //   });
+  //   return () => {
+  //     if (notificationListener.current) {
+  //       Notifications.removeNotificationSubscription(notificationListener.current);
+  //     }
+  //     if (responseListener.current) {
+  //       Notifications.removeNotificationSubscription(responseListener.current);
+  //     }
+  //   };
+  // }, []);
   // --- End of Notification Logic ---
 
   return (
-    // 3. Add the SafeAreaProvider as the OUTERMOST wrapper
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AppProvider>
-          <ThemeProvider theme={theme}>
-            {/* Set the status bar text to light. 
-              This is good practice since your content will now go to the top.
-            */}
-            <StatusBar barStyle="light-content" />
-            <Stack>
-              {/* Hide header for all screens in (app) group */}
-              <Stack.Screen name="(app)" options={{ headerShown: false }} />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <QueryClientProvider client={queryClient}>
+          <AppProvider>
+            <ThemeProvider theme={theme}>
+              {/* translucent StatusBar so background shows through on Android */}
+              <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-              {/* Hide header for all screens in (auth) group */}
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-
-              {/* Show header for not-found page */}
-              <Stack.Screen
-                name="+not-found"
-                options={{
-                  headerShown: true,
-                  headerTitle: 'Page Not Found',
-                  headerLeft: () => (
-                    <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
-                      <Ionicons name="arrow-back" size={24} color="black" />
-                    </TouchableOpacity>
-                  ),
-                }}
-              />
-            </Stack>
-          </ThemeProvider>
-        </AppProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider> // 4. Close the provider
+              {/* BACKGROUND: must be mounted BEFORE navigators so it's behind everything */}
+              <AnimatedGlassBackground />
+              {/* Root Stack: switches between (auth) group and (tabs) group.
+                Auth group won't have the tab bar because Tabs live in (tabs)/_layout.js */}
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  // IMPORTANT: make navigator content transparent so bg shows through
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}>
+                {' '}
+                {/* Main app with tabs */}
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                {/* Auth group (login/signup) */}
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                {/* Keep not-found/page fallback */}
+                <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+              </Stack>
+            </ThemeProvider>
+          </AppProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
-
