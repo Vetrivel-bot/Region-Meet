@@ -2,7 +2,7 @@
 export const theme = {
   colors: {
     // your base brand colors (kept exactly)
-    primary: '#0033A0',
+    primary: '#7fa3efe3',
     accent: '#FFAB00',
     error: '#D50000',
     text: '#FFFFFF',
