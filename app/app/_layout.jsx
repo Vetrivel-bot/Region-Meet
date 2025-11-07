@@ -14,7 +14,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/services/queryClient';
 // --- END FIXES ---
-import { BASE_URL, WS_URL } from '@/config/env';
 
 import { AppProvider } from '@/context/AppContext';
 import { ThemeProvider } from 'styled-components/native';
@@ -30,8 +29,7 @@ const TOKEN_STORAGE_KEY = 'expo-push-token';
 export default function RootLayout() {
   const notificationListener = useRef();
   const responseListener = useRef();
-  console.log(BASE_URL);
-  console.log(WS_URL);
+
   useEffect(() => {
     // This code runs when the app starts
     const setupNavigationBar = async () => {
@@ -53,42 +51,42 @@ export default function RootLayout() {
   }, []);
 
   // --- Updated Notification Logic ---
-  // useEffect(() => {
-  //   const setupNotifications = async () => {
-  //     const currentToken = await registerForPushNotificationsAsync();
-  //     if (!currentToken) {
-  //       console.log('Could not get push token.');
-  //       return;
-  //     }
-  //     const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-  //     if (storedToken !== currentToken) {
-  //       console.log('New or changed push token identified:', currentToken);
-  //       // TODO: Send token to your backend (MongoDB)
-  //       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, currentToken);
-  //       console.log('New token saved to local storage.');
-  //     } else {
-  //       console.log('Push token is already stored and up-to-date.');
-  //     }
-  //     console.log('Native (FCM) Token for testing:', currentToken);
-  //   };
-  //   setupNotifications();
+  useEffect(() => {
+    const setupNotifications = async () => {
+      const currentToken = await registerForPushNotificationsAsync();
+      if (!currentToken) {
+        console.log('Could not get push token.');
+        return;
+      }
+      const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+      if (storedToken !== currentToken) {
+        console.log('New or changed push token identified:', currentToken);
+        // TODO: Send token to your backend (MongoDB)
+        await AsyncStorage.setItem(TOKEN_STORAGE_KEY, currentToken);
+        console.log('New token saved to local storage.');
+      } else {
+        console.log('Push token is already stored and up-to-date.');
+      }
+      console.log('Native (FCM) Token for testing:', currentToken);
+    };
+    setupNotifications();
 
-  //   // --- Listeners ---
-  //   notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-  //     console.log('Notification Received (Foreground):', notification);
-  //   });
-  //   responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-  //     console.log('Notification Tapped:', response);
-  //   });
-  //   return () => {
-  //     if (notificationListener.current) {
-  //       Notifications.removeNotificationSubscription(notificationListener.current);
-  //     }
-  //     if (responseListener.current) {
-  //       Notifications.removeNotificationSubscription(responseListener.current);
-  //     }
-  //   };
-  // }, []);
+    // --- Listeners ---
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification Received (Foreground):', notification);
+    });
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('Notification Tapped:', response);
+    });
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, []);
   // --- End of Notification Logic ---
 
   return (
@@ -114,7 +112,6 @@ export default function RootLayout() {
                 {/* Main app with tabs */}
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 {/* Auth group (login/signup) */}
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="(utils)" options={{ headerShown: false }} />
                 {/* Keep not-found/page fallback */}
                 <Stack.Screen name="+not-found" options={{ headerShown: true }} />

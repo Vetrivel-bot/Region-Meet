@@ -21,6 +21,7 @@
     "@tanstack/query-sync-storage-persister": "^5.90.7",
     "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-query-persist-client": "^5.90.7",
+    "axios": "^1.13.2",
     "eas": "^0.1.0",
     "expo": "54.0.21",
     "expo-blur": "~15.0.7",

@@ -16,8 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, Calendar, Clock, MapPin, Ticket, Star, QrCode, Search } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
 import { theme } from '../../../theme/theme';
+import { useContext } from 'react';
+import { useApp } from '@/context/AppContext'; // <-- added: useApp from your context
 
-const user = { name: 'Alex' };
 const upcoming = {
   id: 'evt-123',
   title: 'Global Tech Innovators Conference',
@@ -56,6 +57,9 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
   const router = useRouter();
 
+  // use the app context user/profile and loading flag
+  const { user, loading } = useApp();
+
   const open = (path) => {
     if (!path) return;
     if (router && typeof router.push === 'function') router.push(path);
@@ -89,6 +93,16 @@ export default function HomeScreen() {
     </Animated.View>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: theme.colors.textPrimary }}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -96,7 +110,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}>
         <Animated.Text entering={FadeInLeft.duration(360)} style={styles.sectionTitle}>
-          Hi {user.name},
+          Hi {user?.fullname || 'Guest'},
         </Animated.Text>
         <Animated.Text
           entering={FadeInLeft.duration(360)}

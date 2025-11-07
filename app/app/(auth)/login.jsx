@@ -1,13 +1,31 @@
+import React, { useState } from 'react';
+import { SafeAreaView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
-import { SafeAreaView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Button } from '@/components/Button';
-export default function LoginScreen() {
-  const handleLogin = () => {
-    // 1. Add your authentication logic here (e.g., call your API)
-    // 2. On success, navigate to the main app
+import { UserAPI } from '@/services/api';
 
-    // We use 'replace' to prevent the user from going "back" to the login screen
-    router.replace('/(tabs)');
+export default function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter your email and password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { user } = await UserAPI.login(email.trim(), password);
+      console.log('✅ Logged in as:', user.fullname);
+      router.replace('/(tabs)');
+    } catch (err) {
+      console.warn(err);
+      Alert.alert('Login Failed', err.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -17,24 +35,28 @@ export default function LoginScreen() {
 
         <TextInput
           placeholder="Email"
-          className="mb-4 h-12 w-full rounded-lg border border-gray-300 px-4"
+          value={email}
+          onChangeText={setEmail}
+          className="mb-4 h-12 w-full rounded-lg border border-gray-300 px-4 text-white"
           keyboardType="email-address"
           autoCapitalize="none"
           placeholderTextColor={'white'}
         />
+
         <TextInput
           placeholder="Password"
-          className="mb-6 h-12 w-full rounded-lg border border-gray-300 px-4"
+          value={password}
+          onChangeText={setPassword}
+          className="mb-6 h-12 w-full rounded-lg border border-gray-300 px-4 text-white"
           secureTextEntry
           placeholderTextColor={'white'}
         />
 
         <Button
-          title="Login"
+          title={loading ? 'Logging in...' : 'Login'}
           onPress={handleLogin}
-          // The className prop now ONLY passes LAYOUT styles
-          // All design styles (bg, text, height) are gone
           className="mb-6 w-full"
+          disabled={loading}
         />
 
         <Link href="/register" asChild>
