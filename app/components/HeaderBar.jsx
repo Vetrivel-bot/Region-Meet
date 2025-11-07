@@ -1,33 +1,35 @@
 // components/HeaderBar.js
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  Animated,
+  TextInput, // Import TextInput
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useSegments } from 'expo-router';
 import { useTheme } from 'styled-components/native';
+import { useRouter, useSegments } from 'expo-router';
+
+// --- Data for the filter chips ---
+const filters = ['Upcoming', 'Past', 'Conferences', 'All', 'Workshops'];
 
 export default function MyTotallyCustomHeaderBar() {
   const theme = useTheme();
+  const [activeFilter, setActiveFilter] = useState('Upcoming');
+
+  // --- Back Button Logic ---
   const router = useRouter();
   const segments = useSegments();
 
-  // === MANUAL ROOTS: put EXACT segment strings here you want to treat as "root" ===
-  // Examples: "(tabs)/(home)/index" or "(tabs)/search" or "profile"
-  // Inspect runtime with console.log(segments.join('/')) if unsure, then add that string here.
-  const rootPaths = [
-    '(tabs)/(home)',
-    '(tabs)/search',
-    '(tabs)/profile',
-    '(tabs)/agenda',
-    // add more exact strings as needed
-  ];
+  const rootPaths = ['(tabs)/(home)', '(tabs)/search', '(tabs)/profile', '(tabs)/agenda'];
 
-  // join current segments into a single string to compare against rootPaths
-  const segPath = segments.join('/'); // e.g. "(tabs)/(home)/index"
-  // show back arrow only when current path is NOT one of the declared rootPaths
+  const segPath = segments.join('/');
   const canGoBack = segPath.length > 0 && !rootPaths.includes(segPath);
 
-  // Animated appearance for arrow (fade + slide)
   const arrowAnim = useRef(new Animated.Value(canGoBack ? 1 : 0)).current;
   useEffect(() => {
     Animated.timing(arrowAnim, {
@@ -37,12 +39,50 @@ export default function MyTotallyCustomHeaderBar() {
     }).start();
   }, [canGoBack, arrowAnim]);
 
+  // Animation for Back Arrow (fades in, slides from left)
+  const arrowOpacity = arrowAnim;
   const arrowTranslate = arrowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-10, 0],
   });
 
-  const arrowOpacity = arrowAnim;
+  // Animation for Title (fades out, slides to left)
+  const titleOpacity = arrowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+  const titleTranslate = arrowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -10],
+  });
+  // --- End Back Button Logic ---
+
+  const renderFilterChip = ({ item }) => {
+    // ... (renderFilterChip function remains unchanged)
+    const isActive = item === activeFilter;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.chipContainer,
+          {
+            backgroundColor: isActive ? theme.colors.primary : theme.colors.chipInactive,
+          },
+        ]}
+        onPress={() => setActiveFilter(item)}>
+        <Text
+          style={[
+            styles.chipText,
+            {
+              color: isActive
+                ? theme.colors.background // Dark text on active
+                : theme.colors.textPrimary, // Light text on inactive
+            },
+          ]}>
+          {item}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView
@@ -51,55 +91,102 @@ export default function MyTotallyCustomHeaderBar() {
         styles.safeArea,
         { backgroundColor: theme.colors.headerBackground || theme.colors.background },
       ]}>
+      {/* === Top Header Bar === */}
       <View style={styles.container}>
-        {/* Left: Animated Back Arrow */}
+        {/* Left: Animated Title / Back Arrow */}
         <View style={styles.left}>
-          <Animated.View
-            style={{
-              opacity: arrowOpacity,
-              transform: [{ translateX: arrowTranslate }],
-            }}>
-            {canGoBack && (
+          {/* === Wrapper View to align both items === */}
+          <View>
+            {/* Back Arrow */}
+            <Animated.View
+              style={{
+                opacity: arrowOpacity,
+                transform: [{ translateX: arrowTranslate }],
+                position: 'absolute', // Position over the title
+                zIndex: 1,
+              }}
+              pointerEvents={canGoBack ? 'auto' : 'none'} // Make tappable only when visible
+            >
               <TouchableOpacity
                 onPress={() => {
-                  // always use router.back(); it will do nothing only if no history exists
-                  // but we keep canGoBack false on rootPaths so user won't see it there.
                   router.back();
                 }}
                 style={styles.backButton}>
-                <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
-                <Text style={[styles.backText, { color: theme.colors.primary }]}>Back</Text>
+                <Ionicons name="chevron-back" size={20} color={theme.colors.textPrimary} />
+                <Text style={[styles.backText, { color: theme.colors.textPrimary }]}>Back</Text>
               </TouchableOpacity>
-            )}
-          </Animated.View>
+            </Animated.View>
+
+            {/* App Title */}
+            <Animated.View
+              style={{
+                opacity: titleOpacity,
+                transform: [{ translateX: titleTranslate }],
+              }}>
+              <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>
+                App Name
+              </Text>
+            </Animated.View>
+          </View>
+          {/* === End Wrapper View =a== */}
         </View>
 
-        {/* Center: Logo */}
+        {/* Center: Search Bar */}
         <View style={styles.center}>
-          <TouchableOpacity onPress={() => router.push('/')} activeOpacity={0.8}>
-            <Image
-              style={styles.logo}
-              source={require('@/assets/favicon.png')}
-              resizeMode="contain"
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface }]}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={theme.colors.textSecondary}
+              style={styles.searchIcon}
             />
-          </TouchableOpacity>
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.textPrimary }]}
+              placeholder="Search events..."
+              placeholderTextColor={theme.colors.textSecondary}
+            />
+          </View>
         </View>
 
         {/* Right: Icons */}
         <View style={styles.right}>
           <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="search" size={22} color={theme.colors.text} />
+            <View>
+              <Ionicons name="map" size={22} color={theme.colors.textPrimary} />
+            </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
+            <View>
+              <Ionicons name="notifications" size={22} color={theme.colors.textPrimary} />
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: theme.colors.error,
+                    borderColor: theme.colors.headerBackground || theme.colors.background,
+                  },
+                ]}
+              />
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.profileButton}>
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>VS</Text>
+          <TouchableOpacity style={styles.iconButton}>
+            <View>
+              <Ionicons name="person-circle" size={30} color={theme.colors.textPrimary} />
             </View>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* === Horizontal Filter List === */}
+      <FlatList
+        // ... (FlatList remains unchanged)
+        data={filters}
+        renderItem={renderFilterChip}
+        keyExtractor={(item) => item}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterListContainer}
+      />
     </SafeAreaView>
   );
 }
@@ -112,34 +199,87 @@ const styles = StyleSheet.create({
     height: 56,
   },
   left: {
-    flex: 1,
+    flex: 1.5, // Evened with right
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 10,
+    justifyContent: 'center', // Reverted to flex-start
   },
   center: {
-    flex: 1.5,
-    alignItems: 'center',
+    flex: 2, // Main space for search
+    alignItems: 'stretch', // Let search bar fill the space
+    paddingHorizontal: 5, // Space between left/right
   },
   right: {
-    flex: 1,
+    flex: 1.5, // Evened with left
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingRight: 15,
+    paddingRight: 10, // Adjusted padding
   },
-  logo: { width: 120, height: 36 },
-  backButton: { flexDirection: 'row', alignItems: 'center' },
-  backText: { fontSize: 16, marginLeft: 4 },
-  iconButton: { marginLeft: 10 },
-  profileButton: { marginLeft: 10 },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e0e0e0',
+  headerTitle: {
+    // New style for the title in the left
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  iconButton: {
+    padding: 5,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+  },
+
+  // --- Search Bar Styles ---
+  searchContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 20, // Pill shape
+    paddingHorizontal: 12,
+    paddingVertical: 8, // Use padding to control height
   },
-  avatarText: { fontSize: 12, fontWeight: '600' },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0, // Remove default padding
+    textAlignVertical: 'center', // Android
+  },
+
+  // --- Back Button Styles ---
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  backText: {
+    fontSize: 17,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+
+  // --- Styles for Filter List ---
+  filterListContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+    paddingBottom: 20,
+  },
+  chipContainer: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

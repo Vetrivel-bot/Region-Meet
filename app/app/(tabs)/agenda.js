@@ -1,91 +1,104 @@
-import React from 'react';
-import { Text, ScrollView } from 'react-native';
-// 1. Import SafeAreaView from the package we installed
-import { SafeAreaView } from 'react-native-safe-area-context';
-import styled from 'styled-components/native';
-import { useQuery } from '@tanstack/react-query'; // Keep your query logic
+import React, { useState } from 'react';
+import { SafeAreaView, View, Text, Button, FlatList, StyleSheet } from 'react-native';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 
-// --- Styled Components (using your theme) ---
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 60,
+      cacheTime: 1000 * 60 * 60 * 24,
+    },
+  },
+});
 
-// This is our main screen container.
-// We use the <SafeAreaView> component and style it directly.
-const ScreenContainer = styled(SafeAreaView)`
-  flex: 1;
-  /* Use your theme's primary color for the background, 
-     so the light status bar text is visible */
-  background-color: ${(props) => props.theme.colors.primary};
-`;
-
-// A simple styled <View> for the content
-// We give this a white/light background for the content cards
-const ContentContainer = styled(ScrollView)`
-  flex: 1;
-  background-color: ${(props) => props.theme.colors.background};
-  padding: ${(props) => props.theme.spacing.medium}px;
-`;
-
-// A title using your theme's text color
-const Title = styled.Text`
-  font-size: 28px;
-  font-weight: bold;
-  color: ${(props) => props.theme.colors.textPrimary};
-  margin-bottom: ${(props) => props.theme.spacing.large}px;
-`;
-
-// A reusable card (like we discussed for Sprint 0)
-const StyledCard = styled.View`
-  background-color: ${(props) => props.theme.colors.surface};
-  border-radius: ${(props) => props.theme.borderRadius.large}px;
-  padding: ${(props) => props.theme.spacing.medium}px;
-  margin-bottom: ${(props) => props.theme.spacing.medium}px;
-  elevation: 3;
-  shadow-color: #000;
-  shadow-offset: 0px 2px;
-  shadow-opacity: 0.1;
-  shadow-radius: 4px;
-`;
-
-// --- FAKE API FUNCTION (for your useQuery) ---
 const fetchAgenda = () =>
   new Promise((resolve) =>
-    setTimeout(() => {
-      console.log('FAKING API FETCH (for Agenda)');
-      resolve([
-        { id: 1, title: 'Keynote: The Future of AI', time: '9:00 AM' },
-        { id: 2, title: 'Workshop: Building with React Native', time: '10:30 AM' },
-        { id: 3, title: 'Exhibitor Showcase Opens', time: '12:00 PM' },
-      ]);
-    }, 1000)
+    setTimeout(
+      () =>
+        resolve([
+          { id: 1, title: 'Keynote: The Future of AI', time: '9:00 AM' },
+          { id: 2, title: 'Workshop: Building with React Native', time: '10:30 AM' },
+          { id: 3, title: 'Exhibitor Showcase Opens', time: '12:00 PM' },
+        ]),
+      1000
+    )
   );
-// ---
 
-export default function AgendaScreen() {
-  // Your useQuery logic
-  const { data: agendaItems, isLoading } = useQuery({
-    queryKey: ['agenda'], // This is the key for the cache
+function AgendaList() {
+  const { data, isLoading, isFetching, status, refetch } = useQuery({
+    queryKey: ['agenda'],
     queryFn: fetchAgenda,
   });
 
   return (
-    // 2. Use ScreenContainer (which is a SafeAreaView) as your root component
-    // This automatically adds padding for the status bar (top)
-    <ScreenContainer edges={['top', 'left', 'right']}>
-      {/* This content container has a different background 
-        and will start *below* the safe area
-      */}
-      <ContentContainer>
-        <Title>Event Agenda</Title>
-
-        {isLoading && <Text>Loading agenda...</Text>}
-
-        {agendaItems?.map((item) => (
-          <StyledCard key={item.id}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{item.title}</Text>
-            <Text style={{ color: '#555' }}>{item.time}</Text>
-          </StyledCard>
-        ))}
-      </ContentContainer>
-    </ScreenContainer>
+    <View style={styles.card}>
+      <Text style={styles.title}>Agenda</Text>
+      <Text style={styles.meta}>status: {status}</Text>
+      <Text style={styles.meta}>isLoading: {isLoading ? 'true' : 'false'}</Text>
+      <Text style={styles.meta}>isFetching: {isFetching ? 'true' : 'false'}</Text>
+      <View style={styles.row}>
+        <Button title="Refetch (hook)" onPress={() => refetch()} />
+      </View>
+      <FlatList
+        style={{ marginTop: 12 }}
+        data={data ?? []}
+        keyExtractor={(i) => String(i.id)}
+        renderItem={({ item }) => (
+          <View style={styles.item}>
+            <Text style={styles.itemTitle}>{item.title}</Text>
+            <Text style={styles.itemTime}>{item.time}</Text>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={{ color: '#888' }}>No items</Text>}
+      />
+    </View>
   );
 }
 
+export default function App() {
+  const [mounted, setMounted] = useState(true);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaView style={styles.container}>
+        <ControlPanel mounted={mounted} setMounted={setMounted} />
+        {mounted ? (
+          <AgendaList />
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.title}>Agenda unmounted</Text>
+          </View>
+        )}
+      </SafeAreaView>
+    </QueryClientProvider>
+  );
+}
+
+function ControlPanel({ mounted, setMounted }) {
+  const qc = useQueryClient();
+
+  return (
+    <View style={styles.controls}>
+      <Button
+        title={mounted ? 'Unmount Agenda' : 'Mount Agenda'}
+        onPress={() => setMounted(!mounted)}
+      />
+      <Button title="Clear Cache" onPress={() => qc.removeQueries(['agenda'])} />
+
+      <Button title="Invalidate Queries" onPress={() => qc.invalidateQueries(['agenda'])} />
+      <Button title="Refetch Queries" onPress={() => qc.refetchQueries(['agenda'])} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0b1220', padding: 16 },
+  controls: { flexDirection: 'row', justifyContent: 'space-between', gap: 4, marginBottom: 12 },
+  card: { backgroundColor: '#0f1724', padding: 12, borderRadius: 10 },
+  title: { color: '#e6f7f0', fontSize: 18, fontWeight: '700' },
+  meta: { color: '#9aa4ae', fontSize: 12, marginTop: 4 },
+  row: { flexDirection: 'row', marginTop: 8 },
+  item: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  itemTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  itemTime: { color: '#9aa4ae', fontSize: 12 },
+});

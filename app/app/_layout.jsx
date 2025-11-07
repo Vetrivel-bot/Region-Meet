@@ -14,11 +14,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/services/queryClient';
 // --- END FIXES ---
+import { BASE_URL, WS_URL } from '@/config/env';
 
 import { AppProvider } from '@/context/AppContext';
 import { ThemeProvider } from 'styled-components/native';
 import { theme } from '@/theme/theme';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export { ErrorBoundary }; // keeps the expo-router error boundary
 import AnimatedGlassBackground from '@/components/AnimatedGlassBackground';
@@ -28,6 +30,27 @@ const TOKEN_STORAGE_KEY = 'expo-push-token';
 export default function RootLayout() {
   const notificationListener = useRef();
   const responseListener = useRef();
+  console.log(BASE_URL);
+  console.log(WS_URL);
+  useEffect(() => {
+    // This code runs when the app starts
+    const setupNavigationBar = async () => {
+      try {
+        // 1. Hide the navigation bar
+        await NavigationBar.setVisibilityAsync('hidden');
+
+        // 2. Set the behavior: "inset-swipe" means the user must swipe
+        // from the edge to see the bar temporarily.
+        await NavigationBar.setBehaviorAsync('inset-swipe');
+
+        console.log('Android navigation bar hidden successfully');
+      } catch (e) {
+        console.error('Failed to hide navigation bar', e);
+      }
+    };
+
+    setupNavigationBar();
+  }, []);
 
   // --- Updated Notification Logic ---
   // useEffect(() => {
@@ -75,12 +98,12 @@ export default function RootLayout() {
           <AppProvider>
             <ThemeProvider theme={theme}>
               {/* translucent StatusBar so background shows through on Android */}
-              <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-
+              <StatusBar hidden />
               {/* BACKGROUND: must be mounted BEFORE navigators so it's behind everything */}
-              <AnimatedGlassBackground />
               {/* Root Stack: switches between (auth) group and (tabs) group.
-                Auth group won't have the tab bar because Tabs live in (tabs)/_layout.js */}
+              Auth group won't have the tab bar because Tabs live in (tabs)/_layout.js */}
+              <AnimatedGlassBackground />
+
               <Stack
                 screenOptions={{
                   headerShown: false,
@@ -92,6 +115,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 {/* Auth group (login/signup) */}
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(utils)" options={{ headerShown: false }} />
                 {/* Keep not-found/page fallback */}
                 <Stack.Screen name="+not-found" options={{ headerShown: true }} />
               </Stack>

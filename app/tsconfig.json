@@ -11,8 +11,14 @@
       "@/context/*": ["context/*"],
       "@/theme/*": ["theme/*"],
       "@/services/*": ["services/*"]
-
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "components/Button.jsx"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+    "components/Button.jsx"
+  ]
 }

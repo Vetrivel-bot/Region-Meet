@@ -1,0 +1,29 @@
+import { Stack } from 'expo-router';
+
+export default function UtilsLayout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        // IMPORTANT: make navigator content transparent so bg shows through
+        contentStyle: { backgroundColor: 'transparent' },
+      }}>
+      <Stack.Screen
+        name="qrcam"
+        options={{
+          // --- Add this ---
+          animation: 'fade',
+          // or 'none' for instant, but 'fade' is nicer
+        }}
+      />
+      {/* <Stack.Screen
+        name="qrdisplay"
+        options={{
+          // --- Add this ---
+          animation: 'fade',
+          // or 'none' for instant, but 'fade' is nicer
+        }}
+      /> */}
+    </Stack>
+  );
+}

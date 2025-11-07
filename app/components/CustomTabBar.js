@@ -12,7 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { router } from 'expo-router';
+import { theme } from '../theme/theme';
 export default function CustomTabBar({ state, descriptors, navigation }) {
   const { width } = useWindowDimensions();
 
@@ -46,47 +47,35 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
     }).start();
 
   const handleCTAPress = () => {
-    const exists = state.routes.find(
-      (r) => r.name.toLowerCase() === 'qrscreen' || r.name.toLowerCase() === 'scan'
-    );
-    if (exists) navigation.navigate(exists.name);
-    else navigation.navigate(state.routes[Math.floor(state.routes.length / 2)].name);
+    router.push('/qrdisplay');
   };
 
   // dynamic styles using computed sizes
   const dynamicStyles = {
     safe: {
       position: 'absolute',
-      left: safeLeftRight,
-      right: safeLeftRight,
-      bottom: Math.max(12, safeLeftRight),
+      left: 0,
+      right: 0,
+      bottom: 0,
+      weight: '100%',
       height: barHeight,
       zIndex: 200,
-      borderRadius: 999,
       overflow: 'visible',
+      borderRadius: 0, // make full box (no rounded corners)
+      backgroundColor: theme.colors.headerBackground, // opaque background
     },
     blur: {
       position: 'absolute',
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.09)',
-      shadowColor: '#000',
-      shadowOpacity: 0.34,
-      shadowOffset: { width: 0, height: 18 },
-      shadowRadius: 28,
+
       elevation: 18,
       overflow: 'hidden',
+      backgroundColor: theme.colors.headerBackground, // opaque fill so it's an opaque box
     },
     container: {
       flexDirection: 'row',
       height: containerHeight,
       alignItems: 'center',
       justifyContent: 'space-around',
-      paddingHorizontal: Math.round(horizontalPadding * 0.5),
       marginTop: Math.round(barHeight * 0.16),
     },
     iconWrapper: {
@@ -102,7 +91,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(10,40,90,0.72)',
+      backgroundColor: theme.colors.tabInactive,
       shadowColor: '#000',
       shadowOpacity: 0.22,
       shadowOffset: { width: 0, height: 6 },
@@ -129,8 +118,8 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
       elevation: 26,
     },
     ctaGradient: {
-      width: Math.round(ctaSize * 0.92),
-      height: Math.round(ctaSize * 0.92),
+      width: Math.round(ctaSize * 0.8),
+      height: Math.round(ctaSize * 0.8),
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
@@ -142,7 +131,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(10,40,90,0.92)',
+      backgroundColor: theme.colors.background,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.16)',
     },
@@ -185,7 +174,8 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
         accessibilityState={focused ? { selected: true } : {}}
         accessibilityLabel={route.name}
         style={styles.tabButton}>
-        <Animated.View style={[dynamicStyles.iconWrapper, { transform: [{ scale: scales[index] }] }]}>
+        <Animated.View
+          style={[dynamicStyles.iconWrapper, { transform: [{ scale: scales[index] }] }]}>
           <View
             style={[
               styles.iconRing,
@@ -227,7 +217,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
           accessibilityLabel="Scan QR"
           style={dynamicStyles.ctaButton}>
           <LinearGradient
-            colors={['#728aceff', '#0b173aff']}
+            colors={['#4ec0baff', '#191d1cff']}
             start={[0, 0]}
             end={[1, 1]}
             style={dynamicStyles.ctaGradient}>
@@ -240,13 +230,25 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
 
       {/* Tabs row with central spacer */}
       <View style={dynamicStyles.container}>
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-evenly',
+            alignItems: 'center',
+          }}>
           {left.map((r, i) => renderTab(r, i))}
         </View>
 
         <View style={{ width: spacerWidth }} pointerEvents="none" />
 
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'space-evenly',
+            alignItems: 'center',
+          }}>
           {right.map((r, i) => renderTab(r, i + half))}
         </View>
       </View>
@@ -260,11 +262,11 @@ const styles = StyleSheet.create({
     left: 6,
     right: 6,
     top: 6,
-    bottom: 6,
-    borderRadius: 999,
+
+    borderRadius: 0, // make inner rim match full box
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.03)',
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: theme.colors.headerBackground,
   },
   tabButton: {
     flex: 1,
@@ -283,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
   },
   iconElevActive: {
-    backgroundColor: 'rgba(10,40,90,0.95)',
+    backgroundColor: theme.colors.primary,
     transform: [{ translateY: -2 }],
     shadowOpacity: 0.36,
     shadowOffset: { width: 0, height: 12 },

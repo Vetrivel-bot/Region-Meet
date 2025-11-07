@@ -13,17 +13,24 @@
     "plugins": [
       "expo-router",
       [
-        // <-- Add this whole block
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
           "color": "#0033A0"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
+    },
+    "androidNavigationBar": {
+      "visible": "immersive"
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -36,15 +43,23 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.regionalmeetapp" // <-- Add this
+      "bundleIdentifier": "com.yourcompany.regionalmeetapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000ff"
       },
-      "package": "com.v3.regionalmeetapp", // <-- Add this
-      "googleServicesFile": "./google-services.json" // <-- Add this
+      "package": "com.v3.regionalmeetapp",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "extra": {
       "router": {},
