@@ -1,5 +1,4 @@
-// components/HeaderBar.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,30 +6,31 @@ import {
   StyleSheet,
   FlatList,
   Animated,
-  TextInput, // Import TextInput
+  TextInput,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from 'styled-components/native';
-import { useRouter, useSegments } from 'expo-router';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { theme } from '@/theme/theme';
+import { useRouter, useSegments, useFocusEffect } from 'expo-router';
+import * as Location from 'expo-location';
+import { useQueryClient } from '@tanstack/react-query';
 
 // --- Data for the filter chips ---
 const filters = ['Upcoming', 'Past', 'Conferences', 'All', 'Workshops'];
 
 export default function MyTotallyCustomHeaderBar() {
-  const theme = useTheme();
   const [activeFilter, setActiveFilter] = useState('Upcoming');
 
   // --- Back Button Logic ---
   const router = useRouter();
   const segments = useSegments();
-
   const rootPaths = ['(tabs)/(home)', '(tabs)/search', '(tabs)/profile', '(tabs)/agenda'];
-
   const segPath = segments.join('/');
   const canGoBack = segPath.length > 0 && !rootPaths.includes(segPath);
-
   const arrowAnim = useRef(new Animated.Value(canGoBack ? 1 : 0)).current;
+
   useEffect(() => {
     Animated.timing(arrowAnim, {
       toValue: canGoBack ? 1 : 0,
@@ -39,14 +39,11 @@ export default function MyTotallyCustomHeaderBar() {
     }).start();
   }, [canGoBack, arrowAnim]);
 
-  // Animation for Back Arrow (fades in, slides from left)
   const arrowOpacity = arrowAnim;
   const arrowTranslate = arrowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-10, 0],
   });
-
-  // Animation for Title (fades out, slides to left)
   const titleOpacity = arrowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0],
@@ -57,8 +54,61 @@ export default function MyTotallyCustomHeaderBar() {
   });
   // --- End Back Button Logic ---
 
+  // --- Location Permission Logic ---
+  const queryClient = useQueryClient();
+  const [permissionStatus, setPermissionStatus] = useState(null);
+  const isGranted = permissionStatus === 'granted';
+
+  // Check permission every time the header comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const checkPermission = async () => {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        setPermissionStatus(status);
+      };
+      checkPermission();
+    }, [])
+  );
+
+  // --- UPDATED Location Press Handler ---
+  const handleLocationPress = async () => {
+    // Check the *current* status first
+    let { status } = await Location.getForegroundPermissionsAsync();
+
+    if (status === 'granted') {
+      // 1. If already granted, navigate
+      router.push('/location');
+      return;
+    }
+
+    if (status === 'denied') {
+      // 2. If permission was explicitly DENIED, prompt to open settings
+      Alert.alert(
+        'Permission Denied',
+        'To use this feature, you need to enable location permissions in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    if (status === 'undetermined') {
+      // 3. If UNDETERMINED (not yet asked), *now* we trigger the permission prompt
+      const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(newStatus); // Update the icon
+
+      if (newStatus === 'granted') {
+        // 4. If user just accepted, re-call the 'me' API
+        console.log('Location permission granted. Refetching user profile...');
+        await queryClient.refetchQueries({ queryKey: ['me'] });
+      }
+    }
+  };
+  // --- End Location Logic ---
+
   const renderFilterChip = ({ item }) => {
-    // ... (renderFilterChip function remains unchanged)
     const isActive = item === activeFilter;
     return (
       <TouchableOpacity
@@ -73,9 +123,7 @@ export default function MyTotallyCustomHeaderBar() {
           style={[
             styles.chipText,
             {
-              color: isActive
-                ? theme.colors.background // Dark text on active
-                : theme.colors.textPrimary, // Light text on inactive
+              color: isActive ? theme.colors.background : theme.colors.textPrimary,
             },
           ]}>
           {item}
@@ -95,18 +143,15 @@ export default function MyTotallyCustomHeaderBar() {
       <View style={styles.container}>
         {/* Left: Animated Title / Back Arrow */}
         <View style={styles.left}>
-          {/* === Wrapper View to align both items === */}
           <View>
-            {/* Back Arrow */}
             <Animated.View
               style={{
                 opacity: arrowOpacity,
                 transform: [{ translateX: arrowTranslate }],
-                position: 'absolute', // Position over the title
+                position: 'absolute',
                 zIndex: 1,
               }}
-              pointerEvents={canGoBack ? 'auto' : 'none'} // Make tappable only when visible
-            >
+              pointerEvents={canGoBack ? 'auto' : 'none'}>
               <TouchableOpacity
                 onPress={() => {
                   router.back();
@@ -117,7 +162,6 @@ export default function MyTotallyCustomHeaderBar() {
               </TouchableOpacity>
             </Animated.View>
 
-            {/* App Title */}
             <Animated.View
               style={{
                 opacity: titleOpacity,
@@ -128,7 +172,6 @@ export default function MyTotallyCustomHeaderBar() {
               </Text>
             </Animated.View>
           </View>
-          {/* === End Wrapper View =a== */}
         </View>
 
         {/* Center: Search Bar */}
@@ -150,11 +193,18 @@ export default function MyTotallyCustomHeaderBar() {
 
         {/* Right: Icons */}
         <View style={styles.right}>
-          <TouchableOpacity style={styles.iconButton}>
+          {/* --- LOCATION BUTTON: uses Ionicons when granted, MaterialIcons 'location-off' when not --- */}
+          <TouchableOpacity style={styles.iconButton} onPress={handleLocationPress}>
             <View>
-              <Ionicons name="map" size={22} color={theme.colors.textPrimary} />
+              {isGranted ? (
+                <Ionicons name="location" size={22} color={theme.colors.textPrimary} />
+              ) : (
+                <MaterialIcons name="location-off" size={22} color={theme.colors.textPrimary} />
+              )}
             </View>
           </TouchableOpacity>
+          {/* --- END LOCATION BUTTON --- */}
+
           <TouchableOpacity style={styles.iconButton}>
             <View>
               <Ionicons name="notifications" size={22} color={theme.colors.textPrimary} />
@@ -179,7 +229,6 @@ export default function MyTotallyCustomHeaderBar() {
 
       {/* === Horizontal Filter List === */}
       <FlatList
-        // ... (FlatList remains unchanged)
         data={filters}
         renderItem={renderFilterChip}
         keyExtractor={(item) => item}
@@ -191,6 +240,7 @@ export default function MyTotallyCustomHeaderBar() {
   );
 }
 
+// --- Styles (Unchanged) ---
 const styles = StyleSheet.create({
   safeArea: {},
   container: {
@@ -199,25 +249,24 @@ const styles = StyleSheet.create({
     height: 56,
   },
   left: {
-    flex: 1.5, // Evened with right
+    flex: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', // Reverted to flex-start
+    justifyContent: 'center',
   },
   center: {
-    flex: 2, // Main space for search
-    alignItems: 'stretch', // Let search bar fill the space
-    paddingHorizontal: 5, // Space between left/right
+    flex: 2,
+    alignItems: 'stretch',
+    paddingHorizontal: 5,
   },
   right: {
-    flex: 1.5, // Evened with left
+    flex: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingRight: 10, // Adjusted padding
+    paddingRight: 10,
   },
   headerTitle: {
-    // New style for the title in the left
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -233,14 +282,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1.5,
   },
-
-  // --- Search Bar Styles ---
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20, // Pill shape
+    borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 8, // Use padding to control height
+    paddingVertical: 8,
   },
   searchIcon: {
     marginRight: 8,
@@ -248,11 +295,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    padding: 0, // Remove default padding
-    textAlignVertical: 'center', // Android
+    padding: 0,
+    textAlignVertical: 'center',
   },
-
-  // --- Back Button Styles ---
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,8 +308,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
-
-  // --- Styles for Filter List ---
   filterListContainer: {
     paddingHorizontal: 15,
     paddingVertical: 5,

@@ -82,8 +82,8 @@ export const UserAPI = {
   logout: async () => {
     await setAuthToken(null);
   },
-  me: async (expoPushToken, platform) => {
-    const res = await api.post('/auth/profile', { expoPushToken, platform });
+  me: async (expoPushToken, platform, location) => {
+    const res = await api.post('/auth/profile', { expoPushToken, platform, location });
     return res.data.user;
   },
 };

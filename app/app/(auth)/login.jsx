@@ -1,10 +1,17 @@
+// 1. Change your React import (you no longer need useContext here)
 import React, { useState } from 'react';
 import { SafeAreaView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Button } from '@/components/Button';
 import { UserAPI } from '@/services/api';
 
+// 2. Change this import from AppContext to useApp
+import { useApp } from '@/context/AppContext';
+
 export default function LoginScreen() {
+  // 3. Change this to use the hook
+  const { setUser } = useApp();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,6 +26,7 @@ export default function LoginScreen() {
       setLoading(true);
       const { user } = await UserAPI.login(email.trim(), password);
       console.log('✅ Logged in as:', user.fullname);
+      setUser(user);
       router.replace('/(tabs)');
     } catch (err) {
       console.warn(err);

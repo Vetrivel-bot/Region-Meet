@@ -1,56 +1,58 @@
 // app/_layout.tsx
 import React, { useEffect, useRef } from 'react';
-import { Stack, Tabs, router, ErrorBoundary } from 'expo-router';
-import { TouchableOpacity, StatusBar } from 'react-native'; // Added StatusBar
-import { Ionicons } from '@expo/vector-icons';
+// 1. Import useSegments
+import { Stack, router, ErrorBoundary, useSegments } from 'expo-router';
+import { StatusBar, View, ActivityIndicator, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import '../global.css'; // global styles
+import '../global.css';
+import { QueryClientProvider, onlineManager } from '@tanstack/react-query'; // 1. Import onlineManager
+import { useNetInfo } from '@react-native-community/netinfo'; // 2. Import NetInfo hook
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// --- HERE ARE THE FIXES ---
-// 1. Import the Safe Area Provider
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-// 2. Import the Query Provider
-import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/services/queryClient';
-// --- END FIXES ---
-
-import { AppProvider } from '@/context/AppContext';
-import { ThemeProvider } from 'styled-components/native';
+import { AppProvider, useApp } from '@/context/AppContext';
+// import { ThemeProvider } from 'styled-components/native';
 import { theme } from '@/theme/theme';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 import * as NavigationBar from 'expo-navigation-bar';
 
-export { ErrorBoundary }; // keeps the expo-router error boundary
+export { ErrorBoundary };
 import AnimatedGlassBackground from '@/components/AnimatedGlassBackground';
 
 const TOKEN_STORAGE_KEY = 'expo-push-token';
-
-export default function RootLayout() {
-  const notificationListener = useRef();
-  const responseListener = useRef();
+// 3. NEW: Create a component to link NetInfo
+function NetInfoManager() {
+  const netInfo = useNetInfo();
 
   useEffect(() => {
-    // This code runs when the app starts
+    // This is the key part:
+    // Tell query-client whether the app is online or not based on NetInfo
+    if (Platform.OS !== 'web') {
+      onlineManager.setOnline(
+        netInfo.isConnected != null && netInfo.isConnected && Boolean(netInfo.isInternetReachable)
+      );
+    }
+  }, [netInfo.isConnected, netInfo.isInternetReachable]);
+
+  return null; // This component doesn't render anything
+}
+export default function RootLayout() {
+  const notificationListener = useRef;
+  const responseListener = useRef;
+
+  useEffect(() => {
     const setupNavigationBar = async () => {
       try {
-        // 1. Hide the navigation bar
         await NavigationBar.setVisibilityAsync('hidden');
-
-        // 2. Set the behavior: "inset-swipe" means the user must swipe
-        // from the edge to see the bar temporarily.
         await NavigationBar.setBehaviorAsync('inset-swipe');
-
-        console.log('Android navigation bar hidden successfully');
       } catch (e) {
         console.error('Failed to hide navigation bar', e);
       }
     };
-
     setupNavigationBar();
   }, []);
 
-  // --- Updated Notification Logic ---
   useEffect(() => {
     const setupNotifications = async () => {
       const currentToken = await registerForPushNotificationsAsync();
@@ -61,9 +63,7 @@ export default function RootLayout() {
       const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
       if (storedToken !== currentToken) {
         console.log('New or changed push token identified:', currentToken);
-        // TODO: Send token to your backend (MongoDB)
         await AsyncStorage.setItem(TOKEN_STORAGE_KEY, currentToken);
-        console.log('New token saved to local storage.');
       } else {
         console.log('Push token is already stored and up-to-date.');
       }
@@ -71,13 +71,13 @@ export default function RootLayout() {
     };
     setupNotifications();
 
-    // --- Listeners ---
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
       console.log('Notification Received (Foreground):', notification);
     });
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       console.log('Notification Tapped:', response);
     });
+
     return () => {
       if (notificationListener.current) {
         Notifications.removeNotificationSubscription(notificationListener.current);
@@ -87,39 +87,104 @@ export default function RootLayout() {
       }
     };
   }, []);
-  // --- End of Notification Logic ---
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider style={{ flex: 1, backgroundColor: 'transparent' }}>
         <QueryClientProvider client={queryClient}>
           <AppProvider>
-            <ThemeProvider theme={theme}>
-              {/* translucent StatusBar so background shows through on Android */}
-              <StatusBar hidden />
-              {/* BACKGROUND: must be mounted BEFORE navigators so it's behind everything */}
-              {/* Root Stack: switches between (auth) group and (tabs) group.
-              Auth group won't have the tab bar because Tabs live in (tabs)/_layout.js */}
-              <AnimatedGlassBackground />
-
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  // IMPORTANT: make navigator content transparent so bg shows through
-                  contentStyle: { backgroundColor: 'transparent' },
-                }}>
-                {' '}
-                {/* Main app with tabs */}
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                {/* Auth group (login/signup) */}
-                <Stack.Screen name="(utils)" options={{ headerShown: false }} />
-                {/* Keep not-found/page fallback */}
-                <Stack.Screen name="+not-found" options={{ headerShown: true }} />
-              </Stack>
-            </ThemeProvider>
+            {/* <ThemeProvider theme={theme}> */}
+            <StatusBar hidden />
+            <AnimatedGlassBackground />
+            <AuthGate />
+            <NetInfoManager /> {/* 4. Add the component here */}
+            {/* </ThemeProvider> */}
           </AppProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * AuthGate
+ *
+ * - While `loading` is true: show background + spinner (no routing).
+ * - If not loading and user == null: only expose `(auth)` stack (user cannot open `(tabs)`).
+ * - If not loading and user exists: only expose `(tabs)` stack.
+ *
+ * This prevents navigation to protected screens when user is not authenticated.
+ */
+function AuthGate() {
+  const { user, loading } = useApp();
+  // 2. Get the current route segments
+  const segments = useSegments();
+
+  // --- UPDATE IS HERE ---
+  // 3. Add the strict validation effect
+  useEffect(() => {
+    // Wait until loading is false
+    if (loading) {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!user && !inAuthGroup) {
+      // If user is NOT logged in and NOT in the (auth) group,
+      // force them to the login screen.
+      // Add delay to prevent crash
+      setTimeout(() => {
+        router.replace('/(auth)/login');
+      }, 0);
+    } else if (user && inAuthGroup) {
+      // If user IS logged in and IS in the (auth) group,
+      // force them to the main app screen.
+      // Add delay to prevent crash
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 0);
+    }
+  }, [user, loading, segments]); // Re-run this effect when user, loading, or route changes
+  // --- END OF UPDATE ---
+
+  // show nothing but background & loader while AppContext initializes
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        {/* keep the animated background mounted (already mounted in layout) */}
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // NOT AUTHENTICATED: only render auth screens
+  if (!user) {
+    console.log('Auth');
+
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        {/* optional util / not-found for fallback */}
+        <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+      </Stack>
+    );
+  }
+
+  // AUTHENTICATED: only render main app (tabs + utils)
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: 'transparent' },
+      }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(utils)" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+    </Stack>
   );
 }
