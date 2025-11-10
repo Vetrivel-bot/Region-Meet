@@ -152,7 +152,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
     if (rn.includes('home') || rn.includes('(home)')) iconName = focused ? 'home' : 'home-outline';
     else if (rn.includes('search')) iconName = focused ? 'search' : 'search-outline';
     else if (rn.includes('profile')) iconName = focused ? 'person' : 'person-outline';
-    else if (rn.includes('settings')) iconName = focused ? 'settings' : 'settings-outline';
+    else if (rn.includes('(schedule)')) iconName = focused ? 'calendar' : 'calendar-outline';
 
     const onPress = () => {
       const event = navigation.emit({

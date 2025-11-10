@@ -12,13 +12,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+// Using imported theme from '@/theme/theme' for the theme object,
+// as 'useTheme' from 'styled-components/native' was in the prompt but not imported/defined.
+// Assuming 'theme' is defined globally or imported correctly elsewhere.
 import { theme } from '@/theme/theme';
-import { useRouter, useSegments, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useSegments } from 'expo-router';
 import * as Location from 'expo-location';
 import { useQueryClient } from '@tanstack/react-query';
 
 // --- Data for the filter chips ---
 const filters = ['Upcoming', 'Past', 'Conferences', 'All', 'Workshops'];
+
+// Define your Root Tabs here based on the folder structure
+const ROOT_TABS = ['(tabs)/home', '(tabs)/search', '(tabs)/profile', '(tabs)/agenda'];
 
 export default function MyTotallyCustomHeaderBar() {
   const [activeFilter, setActiveFilter] = useState('Upcoming');
@@ -26,24 +32,33 @@ export default function MyTotallyCustomHeaderBar() {
   // --- Back Button Logic ---
   const router = useRouter();
   const segments = useSegments();
-  const rootPaths = ['(tabs)/(home)', '(tabs)/search', '(tabs)/profile', '(tabs)/agenda'];
+
+  // Create the full path string from segments (e.g., ['(tabs)', 'home'] -> '(tabs)/home')
   const segPath = segments.join('/');
-  const canGoBack = segPath.length > 0 && !rootPaths.includes(segPath);
-  const arrowAnim = useRef(new Animated.Value(canGoBack ? 1 : 0)).current;
+
+  // 💥 CORE LOGIC: Show back button only if router can go back AND the current path is NOT a root path.
+  // We use router.canGoBack() for initial state and segPath check for root tab exclusion.
+  const isRootTab = ROOT_TABS.includes(segPath);
+  const showBack = router.canGoBack() && !isRootTab;
+
+  const arrowAnim = useRef(new Animated.Value(showBack ? 1 : 0)).current;
 
   useEffect(() => {
     Animated.timing(arrowAnim, {
-      toValue: canGoBack ? 1 : 0,
+      toValue: showBack ? 1 : 0,
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, [canGoBack, arrowAnim]);
+  }, [showBack, arrowAnim]); // Depend on showBack
 
+  // Animation for Back Arrow (fades in, slides from left)
   const arrowOpacity = arrowAnim;
   const arrowTranslate = arrowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [-10, 0],
   });
+
+  // Animation for Title (fades out, slides to left)
   const titleOpacity = arrowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0],
@@ -54,12 +69,11 @@ export default function MyTotallyCustomHeaderBar() {
   });
   // --- End Back Button Logic ---
 
-  // --- Location Permission Logic ---
+  // --- Location Permission Logic (Restored from first prompt) ---
   const queryClient = useQueryClient();
   const [permissionStatus, setPermissionStatus] = useState(null);
   const isGranted = permissionStatus === 'granted';
 
-  // Check permission every time the header comes into focus
   useFocusEffect(
     useCallback(() => {
       const checkPermission = async () => {
@@ -70,19 +84,19 @@ export default function MyTotallyCustomHeaderBar() {
     }, [])
   );
 
-  // --- UPDATED Location Press Handler ---
   const handleLocationPress = async () => {
-    // Check the *current* status first
     let { status } = await Location.getForegroundPermissionsAsync();
 
     if (status === 'granted') {
-      // 1. If already granted, navigate
-      router.push('/location');
+      const currentRoute = segments[segments.length - 1];
+
+      if (currentRoute !== 'location') {
+        router.push('/location');
+      }
       return;
     }
 
     if (status === 'denied') {
-      // 2. If permission was explicitly DENIED, prompt to open settings
       Alert.alert(
         'Permission Denied',
         'To use this feature, you need to enable location permissions in your device settings.',
@@ -95,12 +109,10 @@ export default function MyTotallyCustomHeaderBar() {
     }
 
     if (status === 'undetermined') {
-      // 3. If UNDETERMINED (not yet asked), *now* we trigger the permission prompt
       const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
-      setPermissionStatus(newStatus); // Update the icon
+      setPermissionStatus(newStatus);
 
       if (newStatus === 'granted') {
-        // 4. If user just accepted, re-call the 'me' API
         console.log('Location permission granted. Refetching user profile...');
         await queryClient.refetchQueries({ queryKey: ['me'] });
       }
@@ -123,7 +135,9 @@ export default function MyTotallyCustomHeaderBar() {
           style={[
             styles.chipText,
             {
-              color: isActive ? theme.colors.background : theme.colors.textPrimary,
+              color: isActive
+                ? theme.colors.background // Dark text on active
+                : theme.colors.textPrimary, // Light text on inactive
             },
           ]}>
           {item}
@@ -143,15 +157,18 @@ export default function MyTotallyCustomHeaderBar() {
       <View style={styles.container}>
         {/* Left: Animated Title / Back Arrow */}
         <View style={styles.left}>
+          {/* === Wrapper View to align both items === */}
           <View>
+            {/* Back Arrow */}
             <Animated.View
               style={{
                 opacity: arrowOpacity,
                 transform: [{ translateX: arrowTranslate }],
-                position: 'absolute',
+                position: 'absolute', // Position over the title
                 zIndex: 1,
               }}
-              pointerEvents={canGoBack ? 'auto' : 'none'}>
+              // Make tappable only when showBack is true
+              pointerEvents={showBack ? 'auto' : 'none'}>
               <TouchableOpacity
                 onPress={() => {
                   router.back();
@@ -162,6 +179,7 @@ export default function MyTotallyCustomHeaderBar() {
               </TouchableOpacity>
             </Animated.View>
 
+            {/* App Title */}
             <Animated.View
               style={{
                 opacity: titleOpacity,
@@ -172,6 +190,7 @@ export default function MyTotallyCustomHeaderBar() {
               </Text>
             </Animated.View>
           </View>
+          {/* === End Wrapper View === */}
         </View>
 
         {/* Center: Search Bar */}
@@ -193,7 +212,7 @@ export default function MyTotallyCustomHeaderBar() {
 
         {/* Right: Icons */}
         <View style={styles.right}>
-          {/* --- LOCATION BUTTON: uses Ionicons when granted, MaterialIcons 'location-off' when not --- */}
+          {/* --- LOCATION BUTTON --- */}
           <TouchableOpacity style={styles.iconButton} onPress={handleLocationPress}>
             <View>
               {isGranted ? (
@@ -249,24 +268,25 @@ const styles = StyleSheet.create({
     height: 56,
   },
   left: {
-    flex: 1.5,
+    flex: 1.5, // Evened with right
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center', // Reverted to flex-start
   },
   center: {
-    flex: 2,
-    alignItems: 'stretch',
-    paddingHorizontal: 5,
+    flex: 2, // Main space for search
+    alignItems: 'stretch', // Let search bar fill the space
+    paddingHorizontal: 5, // Space between left/right
   },
   right: {
-    flex: 1.5,
+    flex: 1.5, // Evened with left
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingRight: 10,
+    paddingRight: 10, // Adjusted padding
   },
   headerTitle: {
+    // New style for the title in the left
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -282,12 +302,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1.5,
   },
+
+  // --- Search Bar Styles ---
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 20, // Pill shape
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 8, // Use padding to control height
   },
   searchIcon: {
     marginRight: 8,
@@ -295,9 +317,11 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    padding: 0,
-    textAlignVertical: 'center',
+    padding: 0, // Remove default padding
+    textAlignVertical: 'center', // Android
   },
+
+  // --- Back Button Styles ---
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -308,6 +332,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
+
+  // --- Styles for Filter List ---
   filterListContainer: {
     paddingHorizontal: 15,
     paddingVertical: 5,

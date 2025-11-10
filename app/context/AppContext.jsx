@@ -1,15 +1,18 @@
-import React, { createContext, useContext, useCallback } from 'react';
-import { Alert } from 'react-native'; // Import Alert
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import * as Location from 'expo-location'; // 1. Import Location
-import { UserAPI, loadAuthToken } from '@/services/api';
+import * as Location from 'expo-location';
+// 1. Import setOnUnauthorized
+import { UserAPI, loadAuthToken, setOnUnauthorized } from '@/services/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const AppContext = createContext(null);
 
-// 🔥 fetch Expo push token and platform (Unchanged)
+// --- getPushInfo and getLocation helpers are unchanged ---
+
+// 🔥 fetch Expo push token and platform
 const getPushInfo = async () => {
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -34,7 +37,7 @@ const getPushInfo = async () => {
   }
 };
 
-// --- 2. NEW: GET LOCATION HELPER ---
+// --- GET LOCATION HELPER ---
 /**
  * Gets the user's exact GPS location.
  */
@@ -43,11 +46,9 @@ const getLocation = async () => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       console.warn('Location permission not granted');
-      // Alert.alert('Permission Denied', 'Location access is required to verify your premise.');
       return null;
     }
 
-    // Get "exact premise location" (highest accuracy)
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.BestForNavigation,
     });
@@ -63,17 +64,12 @@ const getLocation = async () => {
 };
 
 /**
- * This is your new query function.
- * It contains the logic from your old useEffect.
+ * This function now *only* fetches the profile.
+ * It assumes the token has already been loaded.
  */
 const fetchUser = async () => {
   try {
-    const token = await loadAuthToken();
-    if (!token) {
-      return null; // No token, so user is null
-    }
-
-    // --- 3. RUN HELPER FUNCTIONS IN PARALLEL ---
+    // --- RUN HELPER FUNCTIONS IN PARALLEL ---
     const [pushInfo, location] = await Promise.all([getPushInfo(), getLocation()]);
 
     // ✅ Fetch profile & send ALL data to backend
@@ -86,33 +82,77 @@ const fetchUser = async () => {
     return profile; // Return the user data
   } catch (err) {
     console.warn('Failed to load user profile:', err.message);
-    // If API.me() fails (e.g., bad token), treat as logged out
+    // The interceptor in api.js will handle clearing the token
     return null;
   }
 };
 
 export const AppProvider = ({ children }) => {
-  // Get the query client instance to update the cache
   const queryClient = useQueryClient();
 
-  // ✅ This one hook replaces your useState and useEffect
-  const { data: user, isLoading: loading } = useQuery({
-    queryKey: ['me'], // The unique name for this data
-    queryFn: fetchUser, // The function that fetches it
-    staleTime: 1000 * 60 * 60, // 1 hour: Data is "fresh" for 1 hour
-    gcTime: 1000 * 60 * 60 * 24, // 24 hours: Keep in cache for 1 day
-    refetchOnReconnect: 'always', // Refetch when internet connection is restored
+  // 2. This is our new, separate loading state
+  // It's true *only* while checking AsyncStorage for the token
+  const [isTokenLoading, setIsTokenLoading] = useState(true);
+
+  // 3. This is the 'me' query
+  const { data: user, isLoading: isUserLoading } = useQuery({
+    queryKey: ['me'],
+    queryFn: fetchUser,
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    refetchOnReconnect: 'always',
+
+    // 4. THE KEY FIX:
+    // This query is *disabled* until two things are true:
+    // a) The initial token check is finished (isTokenLoading is false)
+    // b) A token was *actually found*
+    enabled: !isTokenLoading && !!queryClient.getQueryData(['authToken']),
   });
 
-  // ✅ Create a new 'setUser' function for Login/Logout
-  // This function will manually update the query cache
+  // 5. This effect runs ONCE to check AsyncStorage
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await loadAuthToken();
+        // We store the token (or null) in React Query's cache
+        // for the 'enabled' flag above to use.
+        queryClient.setQueryData(['authToken'], token);
+      } catch (e) {
+        console.warn('Failed to load auth token from storage', e);
+        queryClient.setQueryData(['authToken'], null);
+      } finally {
+        // This check is done, so we set it to false.
+        setIsTokenLoading(false);
+      }
+    };
+
+    checkToken();
+
+    // 6. Tell the api.js interceptor what to do on a 401 error
+    setOnUnauthorized(() => {
+      // If we get a 401, clear both the user and the token
+      queryClient.setQueryData(['me'], null);
+      queryClient.setQueryData(['authToken'], null);
+    });
+  }, [queryClient]);
+
+  // 7. This 'setUser' is for manual login/logout
   const setUser = useCallback(
     (newUserData) => {
-      // When you call 'setUser(user)', it updates the 'me' query's data
+      // Manually update the 'me' query cache
       queryClient.setQueryData(['me'], newUserData);
+      // Also update the 'authToken' cache so the app state is consistent
+      queryClient.setQueryData(['authToken'], newUserData ? 'loggedIn' : null);
     },
     [queryClient]
   );
+
+  // 8. The "REAL" loading state
+  // The app is "loading" if:
+  // a) We are still checking for the token (isTokenLoading)
+  // OR
+  // b) We found a token, and we are now fetching the user (isUserLoading)
+  const loading = isTokenLoading || isUserLoading;
 
   return <AppContext.Provider value={{ user, setUser, loading }}>{children}</AppContext.Provider>;
 };
