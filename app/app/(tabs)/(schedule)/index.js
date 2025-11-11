@@ -54,9 +54,9 @@ const ScheduleItem = ({ item }) => {
         <Text style={styles.infoAddress} numberOfLines={2}>
           {locationAddress}
         </Text>
-        <View style={styles.statusBadge}>
+        {/* <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{status}</Text>
-        </View>
+        </View> */}
       </View>
     </View>
   );

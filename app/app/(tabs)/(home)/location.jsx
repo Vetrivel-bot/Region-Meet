@@ -204,6 +204,31 @@ export default function MapScreen() {
     }
   };
 
+  // --- NEW ZOOM HANDLERS ---
+  const handleZoomIn = async () => {
+    if (mapRef.current) {
+      try {
+        const camera = await mapRef.current.getCamera();
+        camera.zoom += 1;
+        mapRef.current.animateCamera(camera, { duration: 250 });
+      } catch (e) {
+        console.error('Error zooming in: ', e);
+      }
+    }
+  };
+
+  const handleZoomOut = async () => {
+    if (mapRef.current) {
+      try {
+        const camera = await mapRef.current.getCamera();
+        camera.zoom -= 1;
+        mapRef.current.animateCamera(camera, { duration: 250 });
+      } catch (e) {
+        console.error('Error zooming out: ', e);
+      }
+    }
+  };
+
   // 3. Stabilize the marker array
   const memoizedMarkers = useMemo(() => {
     if (!mapData) return [];
@@ -313,6 +338,18 @@ export default function MapScreen() {
         {memoizedMarkers}
       </MapView>
 
+      {/* --- NEW ZOOM CONTROLS --- */}
+      <View style={styles.zoomControlsContainer}>
+        <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
+          <Ionicons name="add" size={26} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+        <View style={styles.zoomSeparator} />
+        <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
+          <Ionicons name="remove" size={26} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      {/* --- END ZOOM CONTROLS --- */}
+
       {/* --- RENDER THE CARD --- */}
       {selectedLocation && (
         <LocationCard location={selectedLocation} onClose={() => setSelectedLocation(null)} />
@@ -401,6 +438,35 @@ const styles = StyleSheet.create({
     triangle: {
       borderTopColor: '#FFC700',
     },
+  },
+
+  // --- NEW ZOOM CONTROLS STYLES ---
+  zoomControlsContainer: {
+    position: 'absolute',
+    right: 15,
+    top: '40%',
+    transform: [{ translateY: -50 }], // This helps center it vertically
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.medium,
+    borderColor: theme.colors.glassBorder,
+    borderWidth: 1,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    overflow: 'hidden', // Ensures the border radius clips the separator
+  },
+  zoomButton: {
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomSeparator: {
+    height: 1,
+    backgroundColor: theme.colors.glassBorder,
+    width: '80%',
+    alignSelf: 'center',
   },
 
   // --- THEMED CARD STYLES ---

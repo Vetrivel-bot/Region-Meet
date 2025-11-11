@@ -3,31 +3,35 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { theme } from '@/theme/theme'; // Import your theme
 
-// QrDisplay - UI matched to QrCam (glassmorphic / dark)
 export default function QrDisplay({ value = 'https://example.com/hardcoded-qr' }) {
   return (
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBarWrap}>
         <View style={styles.topBar}>
-          <Text style={styles.title}>Your QR</Text>
+          <Text style={styles.title}>Your QR Code</Text>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => router.push('/qrcam')}
             accessible
             accessibilityLabel="Open scanner">
-            <Ionicons name="scan-circle" size={26} color="#fff" />
+            <Ionicons name="scan-circle" size={26} color={theme.colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Card */}
       <View style={styles.card}>
-        <View style={styles.qrWrap}>
-          <View style={styles.focusBoxBorder}>
-            <QRCode value={value} size={200} />
-          </View>
+        <View style={styles.qrCodeContainer}>
+          <QRCode
+            value={value}
+            size={200}
+            // Themed QR Code for high contrast
+            color={theme.colors.background}
+            backgroundColor={theme.colors.text}
+          />
         </View>
 
         <Text numberOfLines={2} style={styles.payload}>
@@ -35,7 +39,7 @@ export default function QrDisplay({ value = 'https://example.com/hardcoded-qr' }
         </Text>
 
         <TouchableOpacity style={styles.openBtn} onPress={() => router.push('/qrcam')}>
-          <Ionicons name="camera" size={18} color="#111" />
+          <Ionicons name="camera" size={18} color={theme.colors.text} />
           <Text style={styles.openBtnText}>Open Scanner</Text>
         </TouchableOpacity>
       </View>
@@ -43,10 +47,11 @@ export default function QrDisplay({ value = 'https://example.com/hardcoded-qr' }
   );
 }
 
+// Updated Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.background, // Themed background
     paddingTop: Platform.OS === 'android' ? 18 : 48,
   },
   topBarWrap: {
@@ -57,65 +62,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: theme.borderRadius.large, // Themed
+    backgroundColor: theme.colors.surface, // Themed
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorder, // Themed
   },
-  title: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  title: {
+    color: theme.colors.textPrimary, // Themed
+    fontSize: 18,
+    fontWeight: '700',
+  },
   iconBtn: {
     marginLeft: 'auto',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: theme.colors.chipInactive, // Themed
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.medium, // Themed
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   card: {
     marginHorizontal: 18,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 16,
-    paddingVertical: 26,
-    paddingHorizontal: 18,
+    backgroundColor: theme.colors.surface, // Themed
+    borderRadius: theme.borderRadius.large, // Themed
+    paddingVertical: theme.spacing.large, // Themed
+    paddingHorizontal: theme.spacing.medium, // Themed
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: theme.colors.glassBorder, // Themed
   },
-  qrWrap: {
-    width: 260,
-    height: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    backgroundColor: 'transparent',
-    borderRadius: 14,
+  // Wrapper for the QR code to give it a white background
+  qrCodeContainer: {
+    backgroundColor: theme.colors.text, // White background
+    padding: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.large,
   },
-  focusBoxBorder: {
-    width: 220,
-    height: 220,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-
   payload: {
-    color: '#fff',
+    color: theme.colors.textSecondary, // Themed
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 14,
-    paddingHorizontal: 8,
+    marginBottom: theme.spacing.large,
+    paddingHorizontal: theme.spacing.small,
   },
   openBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    backgroundColor: theme.colors.primary, // Themed
+    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium, // Themed
   },
-  openBtnText: { marginLeft: 8, color: '#111', fontWeight: '600' },
+  openBtnText: {
+    marginLeft: theme.spacing.small,
+    color: theme.colors.text, // Themed
+    fontWeight: '600',
+    fontSize: 16,
+  },
 });

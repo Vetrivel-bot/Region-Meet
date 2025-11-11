@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
+import { theme } from '@/theme/theme'; // Import your theme
 
 export default function QrCam() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -39,6 +40,7 @@ export default function QrCam() {
       Vibration.vibrate(100);
     } catch (e) {}
 
+    // Auto-open logic remains
     if (
       typeof scannedData === 'string' &&
       (scannedData.startsWith('http://') || scannedData.startsWith('https://'))
@@ -80,10 +82,10 @@ export default function QrCam() {
 
       {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color="white" />
+        <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
       </TouchableOpacity>
 
-      {/* ---------- REPLACED OVERLAY: 4 panels to dim outside, clear center ---------- */}
+      {/* Dimming Overlay */}
       <View pointerEvents="none" style={styles.overlay}>
         <View style={styles.overlayTop} />
         <View style={styles.overlayMiddle}>
@@ -93,17 +95,18 @@ export default function QrCam() {
         </View>
         <View style={styles.overlayBottom} />
       </View>
-      {/* ---------- END OVERLAY ---------- */}
 
-      {/* Controls */}
+      {/* Controls Container */}
       <View style={styles.controls} pointerEvents="box-none">
-        {/* Flashlight Toggle Button - MOVED HERE */}
         <TouchableOpacity
           style={styles.torchButton}
           onPress={() => setIsTorchOn((prev) => !prev)}
-          pointerEvents="auto" // Allow interaction
-        >
-          <Ionicons name="flashlight" size={24} color={isTorchOn ? '#FFD700' : 'white'} />
+          pointerEvents="auto">
+          <Ionicons
+            name="flashlight"
+            size={24}
+            color={isTorchOn ? theme.colors.accent : theme.colors.textPrimary}
+          />
         </TouchableOpacity>
 
         <Text style={styles.hint}>Point the camera at a QR code</Text>
@@ -115,23 +118,23 @@ export default function QrCam() {
             </Text>
             <View style={styles.buttonsRow}>
               <TouchableOpacity
-                style={styles.button}
+                style={[styles.buttonBase, styles.buttonOutline]}
                 onPress={() => {
                   setScanned(false);
                   setData(null);
                 }}>
-                <Ionicons name="refresh" size={20} />
-                <Text style={styles.buttonText}>Scan again</Text>
+                <Ionicons name="refresh" size={20} color={theme.colors.primary} />
+                <Text style={[styles.buttonText, styles.buttonTextOutline]}>Scan again</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.button}
+                style={[styles.buttonBase, styles.buttonPrimary]}
                 onPress={() => {
                   if (data) {
                     Linking.openURL(data).catch(() => {});
                   }
                 }}>
-                <Ionicons name="open" size={20} />
-                <Text style={styles.buttonText}>Open</Text>
+                <Ionicons name="open" size={20} color={theme.colors.text} />
+                <Text style={[styles.buttonText, styles.buttonTextPrimary]}>Open</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -141,87 +144,78 @@ export default function QrCam() {
   );
 }
 
+// Updated Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'black' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' },
-  text: { color: 'white' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+  },
+  text: { color: theme.colors.textPrimary, fontSize: 16 },
 
-  // NEW OVERLAY: four panels (top, left, right, bottom) that dim everything except center focus box
+  // OVERLAY
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
-
   overlayTop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '20%', // adjust to move the focus box vertically
+    height: '20%',
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-
   overlayBottom: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '28%', // adjust to taste
+    height: '28%',
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-
   overlayMiddle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 280, // same as focus box height
+    height: 280,
   },
-
   overlaySide: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-
-  // center focus box (clear)
   focusBox: {
     width: 280,
     height: 280,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.medium,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: theme.colors.primary, // Themed border
     backgroundColor: 'transparent',
     zIndex: 2,
   },
 
-  // Moved and adjusted the hint
-  hint: { color: 'white', marginTop: 16, marginBottom: 16 }, // Added margin for spacing
-
+  // CONTROLS
   controls: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 24,
-    top: 0, // Allow controls to take full height for flexible positioning
+    top: 0,
     alignItems: 'center',
-    justifyContent: 'flex-end', // Push controls to the bottom
-    paddingBottom: 20, // Add some padding from the very bottom
-    // Keep existing dimming background if present in your layout
-    backgroundColor: 'rgba(0,0,0,0.0)', // set to transparent so overlay handles dimming; change if you prefer
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
-
-  resultBox: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    padding: 12,
-    borderRadius: 8,
-    width: '92%',
-    marginTop: 20, // Add margin to separate from hint/torch
+  hint: {
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
+    fontSize: 16,
   },
-  resultText: { color: '#111', marginBottom: 8 },
-  buttonsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  button: { flexDirection: 'row', alignItems: 'center', padding: 8, gap: 8 },
-  buttonText: { marginLeft: 6 },
   backButton: {
     position: 'absolute',
     top: Platform.OS === 'android' ? 40 : 60,
     left: 20,
-    zIndex: 11, // Higher zIndex to be on top of the overlay
+    zIndex: 11,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
     width: 40,
@@ -230,25 +224,73 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   torchButton: {
-    // Positioning now relative to the controls view
-    marginBottom: 10, // Adjust as needed to be below the focus box
+    marginBottom: 10,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 11, // Higher zIndex
+    zIndex: 11,
   },
   permissionButton: {
     marginTop: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary, // Themed button
+    borderRadius: theme.borderRadius.small,
   },
   permissionButtonText: {
-    color: 'white',
+    color: theme.colors.text, // High contrast text
     fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // RESULT POPUP
+  resultBox: {
+    backgroundColor: theme.colors.surface, // Glass surface
+    borderRadius: theme.borderRadius.medium,
+    width: '92%',
+    padding: theme.spacing.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.glassBorder, // Glass border
+  },
+  resultText: {
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.medium,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.medium,
+  },
+  buttonBase: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: theme.borderRadius.medium,
+    gap: theme.spacing.small,
+  },
+  buttonPrimary: {
+    backgroundColor: theme.colors.primary,
+  },
+  buttonOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonTextPrimary: {
+    color: theme.colors.text,
+  },
+  buttonTextOutline: {
+    color: theme.colors.primary,
   },
 });
