@@ -87,14 +87,14 @@ export default function MyTotallyCustomHeaderBar() {
 
   useEffect(() => {
     if (debouncedSearchQuery !== undefined) {
-        if (isAllEventsPage) {
-            router.setParams({ ...params, search: debouncedSearchQuery });
-        } else if (debouncedSearchQuery) {
-            router.push({
-                pathname: '/(tabs)/(home)/allEvents',
-                params: { search: debouncedSearchQuery },
-            });
-        }
+      if (isAllEventsPage) {
+        router.setParams({ ...params, search: debouncedSearchQuery });
+      } else if (debouncedSearchQuery) {
+        router.push({
+          pathname: '/(tabs)/(home)/allEvents',
+          params: { search: debouncedSearchQuery },
+        });
+      }
     }
   }, [debouncedSearchQuery]);
 
@@ -146,11 +146,66 @@ export default function MyTotallyCustomHeaderBar() {
   );
 
   const handleLocationPress = async () => {
-    // Implementation from previous step
+    let { status } = await Location.getForegroundPermissionsAsync();
+
+    if (status === 'granted') {
+      const currentRoute = segments[segments.length - 1];
+
+      if (currentRoute !== 'location') {
+        router.push('/location');
+      }
+      return;
+    }
+
+    if (status === 'denied') {
+      Alert.alert(
+        'Permission Denied',
+        'To use this feature, you need to enable location permissions in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    if (status === 'undetermined') {
+      const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(newStatus);
+
+      if (newStatus === 'granted') {
+        console.log('Location permission granted. Refetching user profile...');
+        await queryClient.refetchQueries({ queryKey: ['me'] });
+      }
+    }
   };
+  // --- End Location Logic ---
 
   const handleNotificationPress = async () => {
-    // Implementation from previous step
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      Alert.alert(
+        'Permission Denied',
+        'To receive notifications, you need to enable them in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    // If granted, you can proceed with notification-related logic
+    // For example, navigate to a notifications screen or show a list
+    // Alert.alert('Notifications', 'You have the latest updates!');
+    router.push('/notifications'); // Example navigation
   };
 
   // --- NEW: Smooth Animation Interpolations ---
@@ -297,7 +352,11 @@ export default function MyTotallyCustomHeaderBar() {
               />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => {
+              router.push('/profile');
+            }}>
             <View>
               <Ionicons name="person-circle" size={30} color={theme.colors.textPrimary} />
             </View>
