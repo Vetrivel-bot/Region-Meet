@@ -188,6 +188,28 @@ export const LocationAPI = {
       throw error;
     }
   },
+  /**
+   * Fetches the user's nearby events location.
+   * @returns {Promise<Array>} The location array
+   */
+  getNearbyLocations: async (location) => {
+    try {
+      const locationinfo = {
+        type: 'Point',
+        coordinates: location,
+      };
+      console.log(locationinfo);
+
+      const res = await api.post('/locations/nearby', {
+        location: locationinfo,
+      });
+      return res?.data ?? [];
+    } catch (error) {
+      // --- FIXED: Typo in error message ---
+      console.error('[API] Failed to getNearbyLocations:', error.message);
+      throw error;
+    }
+  },
 };
 
 export default api;

@@ -154,7 +154,7 @@ export const AppProvider = ({ children }) => {
   // b) We found a token, and we are now fetching the user (isUserLoading)
   const loading = isTokenLoading || isUserLoading;
 
-  return <AppContext.Provider value={{ user, setUser, loading }}>{children}</AppContext.Provider>;
+  return <AppContext.Provider value={{ user, setUser, loading, getLocation }}>{children}</AppContext.Provider>;
 };
 
 export const useApp = () => useContext(AppContext);
