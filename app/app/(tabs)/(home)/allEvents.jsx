@@ -6,15 +6,17 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  TouchableOpacity, // Import TouchableOpacity
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { EventAPI } from '@/services/api';
 import { theme } from '@/theme/theme';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router'; // Import useRouter
 
-// Event card (memoized) — now shows registered status badge
+// Event card (memoized) — now clickable
 const EventCard = memo(({ item }) => {
+  const router = useRouter(); // 1. Get the router
   const eventDate = new Date(item.startTime || item.date);
   const timeString = eventDate.toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -23,8 +25,19 @@ const EventCard = memo(({ item }) => {
   });
   const [time, ampm] = timeString.split(' ');
 
+  // 2. Create a press handler
+  const handlePress = () => {
+    // Navigate to 'event-detail' route (adjust this path if needed)
+    // We pass the entire 'item' object as route parameters
+    router.push({
+      pathname: '/eventdetail', // <-- Make sure this route is correct in your app
+      params: item,
+    });
+  };
+
   return (
-    <View style={styles.card}>
+    // 3. Wrap card in TouchableOpacity
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.7} style={styles.card}>
       <View style={styles.dateBox}>
         <Text style={styles.dateBoxTime}>{time}</Text>
         <Text style={styles.dateBoxAmPm}>{ampm}</Text>
@@ -53,22 +66,24 @@ const EventCard = memo(({ item }) => {
           </Text>
         </View>
 
-        <Text style={styles.eventDescription} numberOfLines={3}>
+        {/* 4. CHANGED: numberOfLines is now 2 */}
+        <Text style={styles.eventDescription} numberOfLines={2}>
           {item.description}
         </Text>
 
+        {/* 5. CHANGED: Removed speakers, kept date */}
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>{item.speakers?.slice(0, 2).join(', ')}</Text>
           <Text style={styles.metaText}>
-            • {new Date(item.startTime || item.date).toLocaleDateString()}
+            {new Date(item.startTime || item.date).toLocaleDateString()}
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 });
 
 export default function AllEventsScreen() {
+  // ... (rest of your AllEventsScreen component is unchanged) ...
   const params = useLocalSearchParams();
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
@@ -184,6 +199,7 @@ export default function AllEventsScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ... (container, center, errorText, listContent styles)
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -292,7 +308,7 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end', // 6. CHANGED: Aligned to the right
     marginTop: theme.spacing.small,
   },
   metaText: {
