@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LocationAPI } from '@/services/api'; // Adjust path to your api.js file
 import { Ionicons } from '@expo/vector-icons'; // Assuming you use Expo icons
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router'; // 1. Import router
 
 // 1. Import the theme
 import { theme } from '@/theme/theme';
@@ -33,16 +33,38 @@ const formatEventDate = (isoString) => {
 
 // --- Single Schedule Item Component ---
 const ScheduleItem = ({ item }) => {
-  const { eventLocation, eventDate, status } = item;
+  // 2. Destructure properties
+  const { eventLocation, eventDate, status, _id } = item;
   const { day, month } = formatEventDate(eventDate);
+
+  // Extract location details
+  const locationId = eventLocation?._id; // This is the location ID
   const locationName = eventLocation?.name || 'No Active Location';
   const locationAddress = eventLocation?.address || 'Date registered, location pending.';
 
-  // 2. Pass theme colors to the styles
+  // Pass theme colors to the styles
   const styles = getThemedStyles();
 
+  // 3. Create the press handler
+  const handlePress = () => {
+    // Make sure we have the data we need
+    if (!locationId || !eventDate) {
+      console.warn('Missing locationId or eventDate for this item', item);
+      return; // Don't navigate if data is missing
+    }
+
+    // Navigate to the event detail screen:
+    // - pathname uses the eventLocation._id
+    // - params passes the eventDate as a query parameter
+    router.push({
+      pathname: `events/${locationId}`,
+      params: { eventDate: eventDate },
+    });
+  };
+
   return (
-    <View style={styles.itemContainer}>
+    // 4. Wrap the item in a TouchableOpacity and add the onPress handler
+    <TouchableOpacity style={styles.itemContainer} onPress={handlePress} activeOpacity={0.7}>
       <View style={styles.dateBlock}>
         <Text style={styles.dateDay}>{day}</Text>
         <Text style={styles.dateMonth}>{month}</Text>
@@ -55,17 +77,16 @@ const ScheduleItem = ({ item }) => {
           {locationAddress}
         </Text>
         {/* <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{status}</Text>
-        </View> */}
+         <Text style={styles.statusText}>{status}</Text>
+       </View> */}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 // --- Main Schedule Screen ---
 export default function ScheduleScreen() {
   const queryClient = useQueryClient();
-  // 2. Pass theme colors to the styles
   const styles = getThemedStyles();
 
   const {
@@ -79,34 +100,25 @@ export default function ScheduleScreen() {
     queryKey: ['registeredLocations'],
     queryFn: LocationAPI.getRegisteredLocations,
 
-    // Selector to sort the data (from previous request)
+    // Selector to sort the data
     select: (fetchedData) => {
       if (!fetchedData) return []; // Handle empty/undefined data
       // Create a copy and sort by eventDate in ascending order
       return [...fetchedData].sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
     },
 
-    // --- 💥 UPDATED LOGIC 💥 ---
-    // Data is considered "fresh" for 10 minutes (600,000 milliseconds)
-    // It will not refetch on focus during this time.
+    // Data is considered "fresh" for 10 minutes
     staleTime: 10 * 60 * 1000,
 
-    // This is true by default, but ensures that when the screen is
-    // focused *after* staleTime, it will automatically refetch.
+    // Refetch on window focus after staleTime
     refetchOnWindowFocus: true,
   });
 
-  // 💥 REMOVED useFocusEffect 💥
-  // We no longer need this, as `staleTime` and `refetchOnWindowFocus`
-  // handle this logic declaratively.
+  // Removed useFocusEffect as react-query handles it
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     refetch();
-  //   }, [refetch])
-  // );
+  console.log(schedule);
 
-  // 3. Update hardcoded colors in handlers
+  // --- Loading State ---
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -116,6 +128,7 @@ export default function ScheduleScreen() {
     );
   }
 
+  // --- Error State ---
   if (isError) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -129,6 +142,7 @@ export default function ScheduleScreen() {
     );
   }
 
+  // --- Empty State ---
   if (!schedule || schedule.length === 0) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -139,6 +153,7 @@ export default function ScheduleScreen() {
     );
   }
 
+  // --- Data State ---
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -160,12 +175,12 @@ export default function ScheduleScreen() {
   );
 }
 
-// 4. Create a function to inject theme, as StyleSheet.create runs only once
 // (styles function is unchanged)
 const getThemedStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
+      marginTop: -20,
       backgroundColor: theme.colors.background, // Updated
     },
     centered: {
@@ -227,12 +242,13 @@ const getThemedStyles = () =>
       paddingHorizontal: 16,
       paddingBottom: 32,
     },
+    // itemContainer is now the TouchableOpacity, styles remain the same
     itemContainer: {
       flexDirection: 'row',
       backgroundColor: theme.colors.surface, // Updated
       borderRadius: theme.borderRadius.medium, // Updated
       marginVertical: 8,
-      // Shadow (remains black for depth on dark bg)
+      // Shadow
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2, // Increased opacity for dark bg

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react'; // <-- Added useContext
 import {
   SafeAreaView,
   View,
@@ -10,24 +10,24 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
+  ActivityIndicator, // --- NEW ---
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, Calendar, Clock, MapPin, Ticket, Star, QrCode, Search } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
-import { theme } from '../../../theme/theme';
-import { useContext } from 'react';
-import { useApp } from '@/context/AppContext'; // <-- added: useApp from your context
+import { theme } from '@/theme/theme';
+import { useApp } from '@/context/AppContext';
 
-const upcoming = {
-  id: 'evt-123',
-  title: 'Global Tech Innovators Conference',
-  date: 'November 15, 2025',
-  time: '9:00 AM - 5:00 PM',
-  location: 'Metropolitan Convention Center',
-};
+// --- NEW IMPORTS ---
+import { useQuery } from '@tanstack/react-query';
+import { LocationAPI } from '@/services/api'; // Assuming alias path
+
+// --- REMOVED hard-coded 'upcoming' object ---
+
 const categories = ['Conferences', 'Workshops', 'Socials', 'Webinars', 'Networking', 'Music'];
 const featured = [
+  // ... (featured data remains the same)
   {
     id: 'f1',
     title: 'Design Week 2025',
@@ -47,6 +47,7 @@ const featured = [
   },
 ];
 const nearby = [
+  // ... (nearby data remains the same)
   { id: 'n1', title: 'Local Music Fest', place: 'Downtown Park', distance: '2.5 km' },
   { id: 'n2', title: 'Food Truck Rally', place: 'City Square', distance: '4.1 km' },
   { id: 'n3', title: 'Community Hackathon', place: 'Tech Hub', distance: '5.2 km' },
@@ -58,7 +59,30 @@ export default function HomeScreen() {
   const router = useRouter();
 
   // use the app context user/profile and loading flag
-  const { user, loading } = useApp();
+  const { user, loading } = useApp(); // This is for user session
+
+  // --- NEW: Fetch Upcoming Event ---
+  const { data: upcomingEvent, isLoading: isUpcomingLoading } = useQuery({
+    queryKey: ['upcomingEvent'],
+    queryFn: LocationAPI.getRegisteredEvents, // Fetches all events
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    select: (response) => {
+      const data = response?.data ? response.data : response;
+      if (!Array.isArray(data) || data.length === 0) {
+        return null;
+      }
+      // Sort by date to find the *next* upcoming event
+      const sortedEvents = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Filter for events that haven't ended yet
+      const now = new Date();
+      const futureEvents = sortedEvents.filter((e) => new Date(e.endTime || e.date) > now);
+
+      return futureEvents.length > 0 ? futureEvents[0] : null; // Return the first one
+    },
+  });
+  // --- End NEW ---
+  console.log(upcomingEvent.location._id);
 
   const open = (path) => {
     if (!path) return;
@@ -70,10 +94,7 @@ export default function HomeScreen() {
     <Animated.View
       entering={FadeInLeft.duration(480).delay(index * 120)}
       style={styles.featuredCardWrapper}>
-      <Pressable
-        onPress={() => open(`/event/${item.id}`)}
-        style={styles.featuredCardPressable}
-        accessibilityRole="button">
+      <Pressable style={styles.featuredCardPressable} accessibilityRole="button">
         <ImageBackground
           source={{ uri: item.image }}
           style={styles.featuredCard}
@@ -93,11 +114,12 @@ export default function HomeScreen() {
     </Animated.View>
   );
 
+  // This is the main loading for the user/app session
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: theme.colors.textPrimary }}>Loading...</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -118,30 +140,58 @@ export default function HomeScreen() {
           Upcoming Event
         </Animated.Text>
 
+        {/* --- UPDATED: Upcoming Event Section --- */}
         <Animated.View entering={FadeInUp.duration(520).delay(120)} style={styles.upcomingWrapper}>
-          <Pressable onPress={() => open(`/event/${upcoming.id}`)} accessibilityRole="button">
-            <View style={styles.upcomingCard}>
-              <Text style={styles.upcomingTitle}>{upcoming.title}</Text>
-              <View style={styles.row}>
-                <Calendar size={14} color={theme.colors.textSecondary} />
-                <Text style={styles.muted}>{upcoming.date}</Text>
-              </View>
-              <View style={styles.row}>
-                <Clock size={14} color={theme.colors.textSecondary} />
-                <Text style={styles.muted}>{upcoming.time}</Text>
-              </View>
-              <View style={styles.row}>
-                <MapPin size={14} color={theme.colors.textSecondary} />
-                <Text style={styles.muted}>{upcoming.location}</Text>
-              </View>
-              <View style={styles.upcomingFooter}>
-                <Text style={styles.cta}>View details</Text>
-              </View>
+          {isUpcomingLoading ? (
+            <View style={[styles.upcomingCard, styles.upcomingLoading]}>
+              <ActivityIndicator color={theme.colors.primary} />
+              <Text style={styles.muted}>Loading event...</Text>
             </View>
-          </Pressable>
+          ) : upcomingEvent ? (
+            <Pressable
+              onPress={() => open(`(tabs)/(schedule)/events/${upcomingEvent.location._id}`)}
+              accessibilityRole="button">
+              <View style={styles.upcomingCard}>
+                <Text style={styles.upcomingTitle}>{upcomingEvent.name}</Text>
+                <View style={styles.row}>
+                  <Calendar size={14} color={theme.colors.textSecondary} />
+                  <Text style={styles.muted}>
+                    {new Date(upcomingEvent.date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.row}>
+                  <Clock size={14} color={theme.colors.textSecondary} />
+                  <Text style={styles.muted}>
+                    {new Date(upcomingEvent.startTime).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.row}>
+                  <MapPin size={14} color={theme.colors.textSecondary} />
+                  <Text style={styles.muted}>{upcomingEvent.location.name}</Text>
+                </View>
+                <View style={styles.upcomingFooter}>
+                  <Text style={styles.cta}>View details</Text>
+                </View>
+              </View>
+            </Pressable>
+          ) : (
+            <View style={[styles.upcomingCard, styles.upcomingLoading]}>
+              <Calendar size={20} color={theme.colors.textSecondary} />
+              <Text style={styles.muted}>No upcoming events found.</Text>
+            </View>
+          )}
         </Animated.View>
+        {/* --- End Updated Section --- */}
 
-        <Animated.View entering={FadeInUp.duration(420).delay(260)} style={styles.quickRow}>
+        {/* <Animated.View entering={FadeInUp.duration(420).delay(260)} style={styles.quickRow}>
           <Pressable style={styles.quick} onPress={() => open('/login')} accessibilityRole="button">
             <View style={styles.quickCard}>
               <Ticket size={20} color={theme.colors.primary} />
@@ -157,9 +207,9 @@ export default function HomeScreen() {
               <Text style={styles.quickText}>Create</Text>
             </View>
           </Pressable>
-        </Animated.View>
+        </Animated.View> */}
 
-        <Animated.Text entering={FadeInLeft.duration(360).delay(320)} style={styles.sectionTitle}>
+        {/* <Animated.Text entering={FadeInLeft.duration(360).delay(320)} style={styles.sectionTitle}>
           Categories
         </Animated.Text>
         <Animated.ScrollView
@@ -178,7 +228,7 @@ export default function HomeScreen() {
               </View>
             </Pressable>
           ))}
-        </Animated.ScrollView>
+        </Animated.ScrollView> */}
 
         <Animated.Text entering={FadeInLeft.duration(360).delay(420)} style={styles.sectionTitle}>
           Featured
@@ -238,6 +288,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 18,
     overflow: 'hidden',
+  },
+  // --- NEW STYLE ---
+  upcomingLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    minHeight: 150, // Give it some height
   },
   upcomingTitle: {
     color: theme.colors.textPrimary,

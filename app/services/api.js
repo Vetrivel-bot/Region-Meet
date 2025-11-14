@@ -175,6 +175,19 @@ export const LocationAPI = {
       throw error;
     }
   },
+  /**
+   * Fetches the user's registered events schedule.
+   * @returns {Promise<Array>} The schedule array
+   */
+  getRegisteredEvents: async () => {
+    try {
+      const res = await api.get('/events/getregisteredevents');
+      return res.data?.events ?? [];
+    } catch (error) {
+      console.error('[API] Failed to getregisteredevents:', error.message);
+      throw error;
+    }
+  },
 };
 
 export default api;
