@@ -110,40 +110,55 @@ export default function RootLayout() {
  * AuthGate
  *
  * - While `loading` is true: show background + spinner (no routing).
- * - If not loading and user == null: only expose `(auth)` stack (user cannot open `(tabs)`).
- * - If not loading and user exists: only expose `(tabs)` stack.
+ * - If not loading and user == null: only expose `(auth)` stack.
+ * - If not loading and user exists:
+ * - user.role === 'admin': only expose `(admin)` and `(utils)` stacks.
+ * - user.role === 'user': only expose `(tabs)` and `(utils)` stacks.
  *
- * This prevents navigation to protected screens when user is not authenticated.
+ * This prevents navigation to protected screens when user is not authenticated
+ * or does not have the correct role.
  */
 function AuthGate() {
   const { user, loading } = useApp();
-  // 2. Get the current route segments
   const segments = useSegments();
 
-  // --- UPDATE IS HERE ---
-  // 3. Add the strict validation effect
+  // --- 1. UPDATED REDIRECTION LOGIC ---
   useEffect(() => {
     // Wait until loading is false
     if (loading) {
       return;
     }
 
-    const inAuthGroup = segments[0] === '(auth)';
+    // Get the name of the top-level route group
+    const inGroup = segments[0]; // e.g., '(auth)', '(admin)', '(tabs)'
 
-    if (!user && !inAuthGroup) {
-      // If user is NOT logged in and NOT in the (auth) group,
+    if (!user) {
+      // --- NOT LOGGED IN ---
+      // If user is not logged in and not in the (auth) group,
       // force them to the login screen.
-      // Add delay to prevent crash
-      setTimeout(() => {
-        router.replace('/(auth)/login');
-      }, 0);
-    } else if (user && inAuthGroup) {
-      // If user IS logged in and IS in the (auth) group,
-      // force them to the main app screen.
-      // Add delay to prevent crash
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 0);
+      if (inGroup !== '(auth)') {
+        setTimeout(() => router.replace('/(auth)/login'), 0);
+      }
+    } else {
+      // --- LOGGED IN ---
+      const isHost = user.role === 'host';
+      console.log(`AuthGate: User logged in. Role: ${user.role}`);
+
+      if (isHost) {
+        // --- ADMIN USER ---
+        // If admin is in (auth) or (tabs) group, redirect to admin home.
+        if (inGroup === '(auth)' || inGroup === '(tabs)') {
+          // Assuming your admin home is at /(admin)/(tabs)/home or similar
+          // Adjust this path if your admin root is different
+          setTimeout(() => router.replace('/(admin)/(tabs)'), 0);
+        }
+      } else {
+        // --- REGULAR USER ---
+        // If user is in (auth) or (admin) group, redirect to user home.
+        if (inGroup === '(auth)' || inGroup === '(admin)') {
+          setTimeout(() => router.replace('/(tabs)'), 0);
+        }
+      }
     }
   }, [user, loading, segments]); // Re-run this effect when user, loading, or route changes
   // --- END OF UPDATE ---
@@ -152,16 +167,16 @@ function AuthGate() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        {/* keep the animated background mounted (already mounted in layout) */}
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
+  // --- 2. UPDATED RENDER LOGIC ---
+
   // NOT AUTHENTICATED: only render auth screens
   if (!user) {
-    console.log('Auth');
-
+    console.log('AuthGate: Rendering (auth) stack');
     return (
       <Stack
         screenOptions={{
@@ -169,13 +184,32 @@ function AuthGate() {
           contentStyle: { backgroundColor: 'transparent' },
         }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        {/* optional util / not-found for fallback */}
         <Stack.Screen name="+not-found" options={{ headerShown: true }} />
       </Stack>
     );
   }
 
-  // AUTHENTICATED: only render main app (tabs + utils)
+  // AUTHENTICATED: Render stacks based on role
+  const isHost = user.role === 'host';
+
+  if (isHost) {
+    // --- ADMIN STACKS ---
+    console.log('AuthGate: Rendering (admin) + (utils) stacks');
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}>
+        <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+        <Stack.Screen name="(utils)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+      </Stack>
+    );
+  }
+
+  // --- REGULAR USER STACKS (default) ---
+  console.log('AuthGate: Rendering (tabs) + (utils) stacks');
   return (
     <Stack
       screenOptions={{
