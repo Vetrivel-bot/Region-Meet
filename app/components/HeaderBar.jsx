@@ -18,6 +18,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@/theme/theme';
 import { useRouter, useFocusEffect, useSegments } from 'expo-router';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { useQueryClient } from '@tanstack/react-query';
 
 // --- Data for the filter chips ---
@@ -119,6 +120,33 @@ export default function MyTotallyCustomHeaderBar() {
     }
   };
   // --- End Location Logic ---
+
+  const handleNotificationPress = async () => {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      Alert.alert(
+        'Permission Denied',
+        'To receive notifications, you need to enable them in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    // If granted, you can proceed with notification-related logic
+    // For example, navigate to a notifications screen or show a list
+    // Alert.alert('Notifications', 'You have the latest updates!');
+    router.push('/notifications'); // Example navigation
+  };
 
   const renderFilterChip = ({ item }) => {
     const isActive = item === activeFilter;
@@ -224,7 +252,7 @@ export default function MyTotallyCustomHeaderBar() {
           </TouchableOpacity>
           {/* --- END LOCATION BUTTON --- */}
 
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={handleNotificationPress}>
             <View>
               <Ionicons name="notifications" size={22} color={theme.colors.textPrimary} />
               <View

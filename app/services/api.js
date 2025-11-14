@@ -211,5 +211,21 @@ export const LocationAPI = {
     }
   },
 };
+export const EventAPI = {
+  /**
+   * Fetches the user's nearby events location.
+   * @returns {Promise<Array>} The location array
+   */
+  getAllEvents: async () => {
+    try {
+      const res = await api.get('/events/getevent');
+      return res?.data.events ?? [];
+    } catch (error) {
+      // --- FIXED: Typo in error message ---
+      console.error('[API] Failed to getAllEvents:', error.message);
+      throw error;
+    }
+  },
+};
 
 export default api;

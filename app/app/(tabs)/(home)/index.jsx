@@ -210,6 +210,27 @@ export default function HomeScreen() {
           )}
         </Animated.View>
 
+        <Animated.View entering={FadeInUp.duration(420).delay(260)} style={styles.quickRow}>
+          <Pressable
+            style={styles.quick}
+            onPress={() => open('/allEvents')}
+            accessibilityRole="button">
+            <View style={styles.quickCard}>
+              <Ticket size={20} color={theme.colors.primary} />
+              <Text style={styles.quickText}>My tickets</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            style={styles.quick}
+            onPress={() => open('/create')}
+            accessibilityRole="button">
+            <View style={styles.quickCard}>
+              <Star size={20} color={theme.colors.primary} />
+              <Text style={styles.quickText}>Create</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+
         {/* --- (Commented out sections remain unchanged) --- */}
         {/* <Animated.View entering={FadeInUp.duration(420).delay(260)} style={styles.quickRow}> ... </Animated.View> */}
         {/* <Animated.Text ...>Categories</Animated.Text> */}
