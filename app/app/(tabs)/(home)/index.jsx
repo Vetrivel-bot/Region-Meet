@@ -20,7 +20,7 @@ import { theme } from '@/theme/theme';
 import { useApp } from '@/context/AppContext';
 
 import { useQuery } from '@tanstack/react-query';
-import { LocationAPI } from '@/services/api';
+import { EventAPI, LocationAPI } from '@/services/api';
 
 const categories = ['Conferences', 'Workshops', 'Socials', 'Webinars', 'Networking', 'Music'];
 const featured = [
@@ -68,17 +68,16 @@ export default function HomeScreen() {
   // --- 1. Fetch Upcoming Event ---
   const { data: upcomingEvent, isLoading: isUpcomingLoading } = useQuery({
     queryKey: ['upcomingEvent'],
-    queryFn: LocationAPI.getRegisteredEvents,
+    queryFn: EventAPI.getAllEvents,
     staleTime: 5 * 60 * 1000,
-    select: (response) => {
-      const data = response?.data ? response.data : response;
-      if (!Array.isArray(data) || data.length === 0) {
+    select: (events) => {
+      if (!Array.isArray(events) || events.length === 0) {
         return null;
       }
-      const sortedEvents = data.sort((a, b) => new Date(a.date) - new Date(b.date));
       const now = new Date();
-      const futureEvents = sortedEvents.filter((e) => new Date(e.endTime || e.date) > now);
-      return futureEvents.length > 0 ? futureEvents[0] : null;
+      const sortedEvents = events.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      const nextEvent = sortedEvents.find(e => new Date(e.endTime) > now);
+      return nextEvent || null;
     },
   });
 
@@ -217,7 +216,7 @@ export default function HomeScreen() {
             accessibilityRole="button">
             <View style={styles.quickCard}>
               <Ticket size={20} color={theme.colors.primary} />
-              <Text style={styles.quickText}>My tickets</Text>
+              <Text style={styles.quickText}>Events</Text>
             </View>
           </Pressable>
           <Pressable

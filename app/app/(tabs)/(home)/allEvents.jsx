@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { EventAPI } from '@/services/api';
 import { theme } from '@/theme/theme';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 
 // Event card (memoized) — now shows registered status badge
 const EventCard = memo(({ item }) => {
@@ -70,9 +69,18 @@ const EventCard = memo(({ item }) => {
 });
 
 export default function AllEventsScreen() {
+  const params = useLocalSearchParams();
   const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState('date_asc');
-  // 'date_asc' | 'date_desc' | 'name_asc' | 'name_desc' | 'registered_first' | 'unregistered_first'
+  const [activeFilter, setActiveFilter] = useState('All');
+
+  useEffect(() => {
+    if (params.search) {
+      setQuery(params.search);
+    }
+    if (params.filter) {
+      setActiveFilter(params.filter);
+    }
+  }, [params]);
 
   const {
     data: eventsRaw = [],
@@ -85,19 +93,36 @@ export default function AllEventsScreen() {
     queryFn: EventAPI.getAllEvents,
     staleTime: 5 * 60 * 1000,
     select: (res) => {
-      // EventAPI.getAllEvents returns array (or wrapper); make sure we return array of events
       return Array.isArray(res) ? res : (res?.events ?? []);
     },
   });
 
-  // Filter + search + sorting + ensure registered boolean exists
   const events = useMemo(() => {
-    const q = (query || '').trim().toLowerCase();
     let list = (eventsRaw || []).map((e) => ({
       ...e,
-      registered: !!e.registered, // normalize
+      registered: !!e.registered,
     }));
 
+    if (activeFilter !== 'All') {
+      const now = new Date();
+      list = list.filter((e) => {
+        const eventDate = new Date(e.startTime || e.date);
+        switch (activeFilter) {
+          case 'Upcoming':
+            return eventDate > now;
+          case 'Registered':
+            return e.registered;
+          case 'Conferences':
+            return e.type === 'Conference';
+          case 'Workshops':
+            return e.type === 'Workshop';
+          default:
+            return true;
+        }
+      });
+    }
+
+    const q = (query || '').trim().toLowerCase();
     if (q.length > 0) {
       list = list.filter((e) => {
         const name = (e.name || '').toLowerCase();
@@ -108,42 +133,10 @@ export default function AllEventsScreen() {
       });
     }
 
-    switch (sortMode) {
-      case 'date_asc':
-        list.sort((a, b) => new Date(a.startTime || a.date) - new Date(b.startTime || b.date));
-        break;
-      case 'date_desc':
-        list.sort((a, b) => new Date(b.startTime || b.date) - new Date(a.startTime || a.date));
-        break;
-      case 'name_asc':
-        list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        break;
-      case 'name_desc':
-        list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-        break;
-      case 'registered_first':
-        list.sort((a, b) => Number(b.registered) - Number(a.registered));
-        // tie-breaker by date
-        list.sort(
-          (a, b) =>
-            Number(b.registered) - Number(a.registered) ||
-            new Date(a.startTime || a.date) - new Date(b.startTime || b.date)
-        );
-        break;
-      case 'unregistered_first':
-        list.sort((a, b) => Number(a.registered) - Number(b.registered));
-        list.sort(
-          (a, b) =>
-            Number(a.registered) - Number(b.registered) ||
-            new Date(a.startTime || a.date) - new Date(b.startTime || b.date)
-        );
-        break;
-      default:
-        break;
-    }
+    list.sort((a, b) => new Date(a.startTime || a.date) - new Date(b.startTime || b.date));
 
     return list;
-  }, [eventsRaw, query, sortMode]);
+  }, [eventsRaw, query, activeFilter]);
 
   const renderItem = ({ item }) => <EventCard item={item} />;
 
@@ -167,73 +160,6 @@ export default function AllEventsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Search + sort header */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Feather name="search" size={16} color={theme.colors.textSecondary} />
-          <TextInput
-            placeholder="Search events...."
-            placeholderTextColor={theme.colors.textSecondary}
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-          />
-          {query.length > 0 ? (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Feather name="x" size={16} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.sortRow}>
-          <TouchableOpacity
-            style={[
-              styles.sortBtn,
-              sortMode === 'date_asc' || sortMode === 'date_desc' ? styles.sortBtnActive : null,
-            ]}
-            onPress={() => setSortMode((s) => (s === 'date_asc' ? 'date_desc' : 'date_asc'))}>
-            <Text
-              style={[styles.sortText, sortMode.startsWith('date') ? styles.sortTextActive : null]}>
-              Date
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.sortBtn,
-              sortMode === 'name_asc' || sortMode === 'name_desc' ? styles.sortBtnActive : null,
-            ]}
-            onPress={() => setSortMode((s) => (s === 'name_asc' ? 'name_desc' : 'name_asc'))}>
-            <Text
-              style={[styles.sortText, sortMode.startsWith('name') ? styles.sortTextActive : null]}>
-              Name
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.sortBtn,
-              sortMode === 'registered_first' || sortMode === 'unregistered_first'
-                ? styles.sortBtnActive
-                : null,
-            ]}
-            onPress={() =>
-              setSortMode((s) =>
-                s === 'registered_first' ? 'unregistered_first' : 'registered_first'
-              )
-            }>
-            <Text
-              style={[
-                styles.sortText,
-                sortMode.includes('registered') ? styles.sortTextActive : null,
-              ]}>
-              Reg
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <FlatList
         data={events}
         keyExtractor={(item) => item._id}
@@ -272,63 +198,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: theme.spacing.medium,
   },
-
-  // search + sort
-  searchRow: {
-    paddingHorizontal: theme.spacing.medium,
-    paddingTop: theme.spacing.medium,
-    paddingBottom: theme.spacing.small,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  searchBox: {
-    flex: 1,
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 6,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    padding: 0,
-  },
-  sortRow: {
-    marginLeft: 8,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  sortBtn: {
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  sortBtnActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  sortText: {
-    color: theme.colors.textPrimary,
-    fontWeight: '700',
-  },
-  sortTextActive: {
-    color: '#fff',
-  },
-
-  // List
   listContent: {
     paddingHorizontal: theme.spacing.medium,
     paddingTop: theme.spacing.medium,
     paddingBottom: theme.spacing.large,
   },
-
-  // Card
   card: {
     flexDirection: 'row',
     backgroundColor: theme.colors.card,
@@ -416,7 +290,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -426,8 +299,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 13,
   },
-
-  // Empty State
   emptyContainer: {
     marginTop: 40,
   },
