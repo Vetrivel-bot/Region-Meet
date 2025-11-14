@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+import { router } from 'expo-router';
 
 const STORAGE_KEY = 'authToken';
 const REFRESH_TOKEN_HEADER = 'x-new-token';
@@ -141,7 +142,35 @@ export const UserAPI = {
       platform,
       location,
     });
-    return res.data?.user ?? null;
+    const { user, locationVerification } = res.data || {};
+
+    if (locationVerification && !locationVerification.success) {
+      const { status, message } = locationVerification;
+
+      let buttons = [{ text: 'OK' }];
+
+      // For these statuses, add a navigation button
+      if (
+        status === 'relocated' ||
+        status === 'out_of_bounds' ||
+        status === 'unregistered_nearby'
+      ) {
+        buttons.unshift({
+          text: 'Show My QR',
+          onPress: () => router.push('/(utils)/qrdisplay'),
+          style: 'cancel',
+        });
+      }
+
+      Alert.alert(
+        'Location Alert', // Title
+        message, // Message
+        buttons,
+        { cancelable: true }
+      );
+    }
+
+    return user ?? null;
   },
 };
 
