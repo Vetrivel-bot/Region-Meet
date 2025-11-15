@@ -73,6 +73,16 @@ export const getUserLocationLog = async (id) => {
   }
 };
 
+export const createQrUser = async (userData) => {
+  try {
+    const response = await axios.post(`${API_URL}/users/qr`, userData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error creating QR user:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
 // Event Management
 export const getAllEvents = async (params = {}) => {
   try {
