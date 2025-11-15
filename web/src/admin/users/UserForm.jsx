@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createUser, getUserById, updateUser } from '../../services/adminApi';
+import { createUser, getUserById, updateUser, getAllHosts } from '../../services/adminApi';
 
 const UserForm = () => {
   const { id } = useParams(); // Get user ID from URL for edit mode
@@ -21,34 +21,37 @@ const UserForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [hosts, setHosts] = useState([]);
 
   useEffect(() => {
-    if (id) {
-      const fetchUser = async () => {
-        try {
-          setLoading(true);
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+        const hostsData = await getAllHosts();
+        setHosts(hostsData);
+
+        if (id) {
           const user = await getUserById(id);
           setFormData({
             fullname: user.fullname || '',
             email: user.email || '',
-            // password is not pre-filled for security reasons
             role: user.role || 'user',
             avatar: user.avatar || '',
             subrole: user.subrole || '',
-            host: user.host || '',
+            host: user.host?._id || '', // Assuming host stores the _id of the host
             isVerified: user.isVerified || false,
             expoPushToken: user.expoPushToken || '',
             expoPlatform: user.expoPlatform || '',
           });
-        } catch (err) {
-          setError(err.message);
-          console.error("Failed to fetch user for edit:", err);
-        } finally {
-          setLoading(false);
         }
-      };
-      fetchUser();
-    }
+      } catch (err) {
+        setError(err.message);
+        console.error("Failed to fetch initial data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
   }, [id]);
 
   const handleChange = (e) => {
@@ -170,7 +173,26 @@ const UserForm = () => {
             <option value="supervisor">Supervisor</option>
           </select>
         </div>
-        {/* Add other fields as needed, e.g., avatar, subrole, host, isVerified */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="host">
+            Host
+          </label>
+          <select
+            id="host"
+            name="host"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={formData.host}
+            onChange={handleChange}
+          >
+            <option value="">Select a Host</option>
+            {hosts.map((host) => (
+              <option key={host._id} value={host._id}>
+                {host.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Add other fields as needed, e.g., avatar, subrole, isVerified */}
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="isVerified">
             Is Verified

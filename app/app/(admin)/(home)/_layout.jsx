@@ -10,7 +10,7 @@ export default function HomeStackLayout() {
         screenOptions={{
           headerShown: false,
           // IMPORTANT: make navigator content transparent so bg shows through
-          contentStyle: { backgroundColor: theme.colors.background, borderRadius: 888},
+          contentStyle: { backgroundColor: theme.colors.background, borderRadius: 888 },
         }}>
         {/* translucent StatusBar so background shows through on Android */}
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />

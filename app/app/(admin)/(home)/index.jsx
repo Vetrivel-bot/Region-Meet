@@ -14,7 +14,19 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Calendar, Clock, MapPin, Ticket, Star, QrCode, Search } from 'lucide-react-native';
+import {
+  Bell,
+  Calendar,
+  Clock,
+  MapPin,
+  Ticket,
+  Star,
+  QrCode,
+  Search,
+  PlusCircle,
+  PersonStanding,
+  User,
+} from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
 import { theme } from '@/theme/theme';
 import { useApp } from '@/context/AppContext';
@@ -221,11 +233,31 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             style={styles.quick}
-            onPress={() => open('/create')}
+            onPress={() => open('./create')}
             accessibilityRole="button">
             <View style={styles.quickCard}>
-              <Star size={20} color={theme.colors.primary} />
-              <Text style={styles.quickText}>Create</Text>
+              <PlusCircle size={20} color={theme.colors.primary} />
+              <Text style={styles.quickText}>Create User</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+        <Animated.View entering={FadeInUp.duration(420).delay(260)} style={styles.quickRow}>
+          <Pressable
+            style={styles.quick}
+            onPress={() => open('./updateuser')}
+            accessibilityRole="button">
+            <View style={styles.quickCard}>
+              <User size={20} color={theme.colors.primary} />
+              <Text style={styles.quickText}>Update User</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            style={styles.quick}
+            onPress={() => open('./registerlocation')}
+            accessibilityRole="button">
+            <View style={styles.quickCard}>
+              <PlusCircle size={20} color={theme.colors.primary} />
+              <Text style={styles.quickText}>Register Location</Text>
             </View>
           </Pressable>
         </Animated.View>

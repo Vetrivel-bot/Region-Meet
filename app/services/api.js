@@ -172,6 +172,26 @@ export const UserAPI = {
 
     return user ?? null;
   },
+
+  createQrUser: async (fullname, email, password, role, eventLocationId) => {
+    const res = await api.post('/admin/users/qr', { fullname, email, password, role, eventLocationId });
+    return res.data;
+  },
+
+  getUserById: async (userId) => {
+    const res = await api.get(`/admin/users/${userId}`);
+    return res.data;
+  },
+
+  updateUser: async (userId, fullname, email, role, eventLocationId) => {
+    const res = await api.put(`/admin/users/${userId}`, { fullname, email, role, eventLocationId });
+    return res.data;
+  },
+
+  updateDailyRegisteredLocation: async (userId, eventLocationId) => {
+    const res = await api.put(`/admin/users/${userId}/registerlocation`, { eventLocationId });
+    return res.data;
+  },
 };
 
 export const LocationAPI = {
