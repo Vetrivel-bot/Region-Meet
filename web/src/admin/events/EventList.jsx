@@ -154,7 +154,9 @@ const EventList = () => {
                   <td className="py-3 px-4">{event.location?.name || 'N/A'}</td>
                   <td className="py-3 px-4">{event.host?.name || 'N/A'}</td>
                   <td className="py-3 px-4">{new Date(event.date).toLocaleDateString()}</td>
-                  <td className="py-3 px-4">{event.registrations?.length || 0}</td>
+                  <td className="py-3 px-4">
+                    {event.registrations.filter(r => r.attended).length} / {event.registrations?.length || 0}
+                  </td>
                   <td className="py-3 px-4 flex space-x-2">
                     <Link
                       to={`/admin/events/edit/${event._id}`}
@@ -184,15 +186,39 @@ const EventList = () => {
 
       {modalOpen && selectedEvent && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Registrations for {selectedEvent.name}</h3>
-              <div className="mt-2 px-7 py-3">
-                <ul className="list-disc list-inside">
-                  {selectedEvent.registrations.map(reg => (
-                    reg.user && <li key={reg._id}>{reg.user.name} ({reg.user.email})</li>
-                  ))}
-                </ul>
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 text-center">Registrations for {selectedEvent.name}</h3>
+              <p className="text-center text-sm text-gray-500">
+                {selectedEvent.registrations.filter(r => r.attended).length} Attended / {selectedEvent.registrations.length} Registered
+              </p>
+              <div className="mt-4 px-7 py-3">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {selectedEvent.registrations.map(reg => (
+                      reg.user && (
+                        <tr key={reg._id}>
+                          <td className="px-6 py-4 whitespace-nowrap">{reg.user.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{reg.user.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              reg.attended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {reg.attended ? 'Attended' : 'Not Attended'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <div className="items-center px-4 py-3">
                 <button
