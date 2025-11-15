@@ -13,6 +13,9 @@ import AdminLogin from './admin/AdminLogin.jsx';
 import ProtectedRoute from './admin/ProtectedRoute.jsx';
 import EventLocationList from './admin/eventlocations/EventLocationList.jsx';
 import EventLocationForm from './admin/eventlocations/EventLocationForm.jsx';
+import EventList from './admin/events/EventList.jsx';
+import EventForm from './admin/events/EventForm.jsx';
+import EventAttendance from './admin/events/EventAttendance.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -33,6 +36,10 @@ createRoot(document.getElementById('root')).render(
             <Route path="eventlocations" element={<EventLocationList />} />
             <Route path="eventlocations/new" element={<EventLocationForm />} />
             <Route path="eventlocations/edit/:id" element={<EventLocationForm />} />
+            <Route path="events" element={<EventList />} />
+            <Route path="events/new" element={<EventForm />} />
+            <Route path="events/edit/:id" element={<EventForm />} />
+            <Route path="events/attendance/:id" element={<EventAttendance />} />
           </Route>
         </Route>
         {/* Add other top-level routes here */}

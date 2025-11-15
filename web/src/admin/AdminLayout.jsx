@@ -20,6 +20,9 @@ const AdminLayout = () => {
             <li className="mb-2">
               <Link to="/admin/eventlocations" className="block hover:bg-gray-700 p-2 rounded">Manage Locations</Link>
             </li>
+            <li className="mb-2">
+              <Link to="/admin/events" className="block hover:bg-gray-700 p-2 rounded">Manage Events</Link>
+            </li>
             {/* Add other admin links here */}
           </ul>
         </nav>

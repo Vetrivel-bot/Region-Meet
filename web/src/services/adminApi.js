@@ -1,141 +1,276 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api"; // Adjust as per your backend URL
+import axios from 'axios';
 
+const API_URL = 'http://localhost:3000/api/admin'; // Adjust if your API URL is different
+
+// Helper to get the token
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
+  const token = localStorage.getItem('token');
   return {
-    "Content-Type": "application/json",
-    Authorization: token ? `Bearer ${token}` : "",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   };
-};
-
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.message || "Something went wrong");
-  }
-  return response.json();
 };
 
 // User Management
 export const getAllUsers = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/users`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.get(`${API_URL}/users`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching users:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const getUserById = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.get(`${API_URL}/users/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching user ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const createUser = async (userData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/users`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(userData),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.post(`${API_URL}/users`, userData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error creating user:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const updateUser = async (id, userData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(userData),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.put(`${API_URL}/users/${id}`, userData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating user ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const deleteUser = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.delete(`${API_URL}/users/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting user ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+// Event Management
+export const getAllEvents = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/events`, { ...getAuthHeaders(), params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching events:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const getEventById = async (id) => {
+  try {
+    const response = await axios.get(`${API_URL}/events/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching event ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const createEvent = async (eventData) => {
+  try {
+    const response = await axios.post(`${API_URL}/events`, eventData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error creating event:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const updateEvent = async (id, eventData) => {
+  try {
+    const response = await axios.put(`${API_URL}/events/${id}`, eventData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating event ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const deleteEvent = async (id) => {
+  try {
+    const response = await axios.delete(`${API_URL}/events/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting event ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
+export const getEventAttendance = async (id) => {
+  try {
+    const response = await axios.get(`${API_URL}/events/${id}/attendance`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching event attendance for ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 // Host Management
 export const getAllHosts = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/hosts`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.get(`${API_URL}/hosts`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching hosts:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const getHostById = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/hosts/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.get(`${API_URL}/hosts/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching host ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const createHost = async (hostData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/hosts`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(hostData),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.post(`${API_URL}/hosts`, hostData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error('Error creating host:', error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const updateHost = async (id, hostData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/hosts/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(hostData),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.put(`${API_URL}/hosts/${id}`, hostData, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating host ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 export const deleteHost = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/hosts/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+  try {
+    const response = await axios.delete(`${API_URL}/hosts/${id}`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting host ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
 };
 
 // Event Location Management
+
 export const getAllEventLocations = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/eventlocations`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+
+  try {
+
+    const response = await axios.get(`${API_URL}/eventlocations`, getAuthHeaders());
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error('Error fetching event locations:', error.response?.data || error.message);
+
+    throw error.response?.data || error;
+
+  }
+
 };
+
+
 
 export const getEventLocationById = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/eventlocations/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+
+  try {
+
+    const response = await axios.get(`${API_URL}/eventlocations/${id}`, getAuthHeaders());
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(`Error fetching event location ${id}:`, error.response?.data || error.message);
+
+    throw error.response?.data || error;
+
+  }
+
 };
+
+
 
 export const createEventLocation = async (locationData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/eventlocations`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(locationData),
-  });
-  return handleResponse(response);
+
+  try {
+
+    const response = await axios.post(`${API_URL}/eventlocations`, locationData, getAuthHeaders());
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error('Error creating event location:', error.response?.data || error.message);
+
+    throw error.response?.data || error;
+
+  }
+
 };
+
+
 
 export const updateEventLocation = async (id, locationData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/eventlocations/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(locationData),
-  });
-  return handleResponse(response);
+
+  try {
+
+    const response = await axios.put(`${API_URL}/eventlocations/${id}`, locationData, getAuthHeaders());
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(`Error updating event location ${id}:`, error.response?.data || error.message);
+
+    throw error.response?.data || error;
+
+  }
+
 };
 
+
+
 export const deleteEventLocation = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/eventlocations/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  return handleResponse(response);
+
+  try {
+
+    const response = await axios.delete(`${API_URL}/eventlocations/${id}`, getAuthHeaders());
+
+    return response.data;
+
+  } catch (error) {
+
+    console.error(`Error deleting event location ${id}:`, error.response?.data || error.message);
+
+    throw error.response?.data || error;
+
+  }
+
 };
