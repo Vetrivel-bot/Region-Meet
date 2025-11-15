@@ -63,6 +63,16 @@ export const deleteUser = async (id) => {
   }
 };
 
+export const getUserLocationLog = async (id) => {
+  try {
+    const response = await axios.get(`${API_URL}/users/${id}/locationlog`, getAuthHeaders());
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching location log for user ${id}:`, error.response?.data || error.message);
+    throw error.response?.data || error;
+  }
+};
+
 // Event Management
 export const getAllEvents = async (params = {}) => {
   try {

@@ -84,6 +84,12 @@ const UserList = () => {
                     >
                       Delete
                     </button>
+                    <Link
+                      to={`/admin/users/timeline/${user._id}`}
+                      className="bg-purple-500 hover:bg-purple-700 text-white text-sm py-1 px-3 rounded"
+                    >
+                      Timeline
+                    </Link>
                   </td>
                 </tr>
               ))}

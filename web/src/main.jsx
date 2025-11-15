@@ -16,6 +16,7 @@ import EventLocationForm from './admin/eventlocations/EventLocationForm.jsx';
 import EventList from './admin/events/EventList.jsx';
 import EventForm from './admin/events/EventForm.jsx';
 import EventAttendance from './admin/events/EventAttendance.jsx';
+import UserTimeline from './admin/users/UserTimeline.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="users" element={<UserList />} />
             <Route path="users/new" element={<UserForm />} />
             <Route path="users/edit/:id" element={<UserForm />} />
+            <Route path="users/timeline/:id" element={<UserTimeline />} />
             <Route path="hosts" element={<HostList />} />
             <Route path="hosts/new" element={<HostForm />} />
             <Route path="hosts/edit/:id" element={<HostForm />} />
